@@ -324,6 +324,7 @@ footer{margin-top:52px;border-top:2px solid var(--ink);padding:20px 0 46px;font-
 .term .src.spring{background:var(--mk-cyan)}
 .term .src.docker{background:var(--mk-cyan)}
 .term .src.k8s{background:var(--mk-yellow)}
+.term .src.nosql{background:var(--mk-pink)}
 .term p{font-size:14.5px;margin:0 0 8px}
 .term a{font-family:var(--font-round);font-weight:700;font-size:13px;color:var(--red);text-decoration:none}
 .term a:hover{text-decoration:underline}
@@ -333,3 +334,23 @@ footer{margin-top:52px;border-top:2px solid var(--ink);padding:20px 0 46px;font-
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;
   background:#EEF3F8;border:1px solid var(--rule-strong);border-radius:5px;padding:1px 5px;
 }
+
+
+/* ---------- 更新情報（トップページ） ---------- */
+.newsbox{background:#fff;border:2px solid var(--ink);border-radius:14px;padding:4px 18px;box-shadow:5px 5px 0 var(--rule-strong)}
+.newslist{list-style:none;margin:0;padding:0}
+.newslist li{
+  display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;
+  padding:14px 0;border-bottom:1px dashed var(--rule-strong);
+}
+.newslist li:last-child{border-bottom:0}
+.newslist .date{font-family:var(--font-round);font-weight:700;font-size:13px;color:var(--ink-soft);flex:0 0 auto}
+.newslist .tag{
+  font-family:var(--font-round);font-weight:700;font-size:11.5px;line-height:1.8;
+  border:1.5px solid var(--ink);border-radius:999px;padding:0 10px;background:var(--mk-yellow);flex:0 0 auto;
+}
+.newslist .tag.new{background:var(--mk-pink)}
+.newslist .tag.fix{background:var(--mk-cyan)}
+.newslist .body{flex:1 1 240px;font-size:14.5px;min-width:0}
+.newslist a{font-family:var(--font-round);font-weight:700;color:var(--red);text-decoration:none}
+.newslist a:hover{text-decoration:underline}

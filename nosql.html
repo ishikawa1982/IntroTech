@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NoSQLのしくみ — 表の形に、こだわらない</title>
+<meta name="description" content="NoSQL（ドキュメント・キーバリュー・列指向・グラフ）を、たとえ話・図解・クイズでたどるやさしい解説ページ。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="topbar">
+  <span class="logo">NoSQLのしくみ</span>
+  <span class="ver" id="version">v1.0.0</span>
+  <a class="home" href="index.html">← 用語集トップ</a>
+</header>
+
+<main>
+
+<div class="hero" id="basic">
+  <h1><span class="mark">表の形</span>に、<br>こだわらない。</h1>
+  <p>データベースといえば、行と列の表でした。きれいに整理でき、条件をつけて自由に探せる。よくできた仕組みです。——ただ、扱う量が1台に収まらなくなったとき、その「きれいさ」が足かせになることがあります。<strong>NoSQL</strong> は、表の形をいったん手ばなして、<strong>使うときの形のまま置く</strong>ことを選んだデータベースたちの総称です。</p>
+
+  <div class="chain">
+    <p class="chain-title">表をやめる、という判断にいたるまで——</p>
+    <ol>
+      <li>
+        <span class="node now">量が増える<small>いま</small></span>
+        <span class="say">1台の機械に、データも問い合わせも収まらなくなる</span>
+      </li>
+      <li class="arrowline">機械を増やして、分けて持ちたい</li>
+      <li>
+        <span class="node">でも、表はつながっている<small>結合</small></span>
+        <span class="say">別々の台に置いた表どうしを、つなぎ直すのは重い</span>
+      </li>
+      <li class="arrowline">だったら、つながなくていい置き方に</li>
+      <li>
+        <span class="node robot">使う形のまま、まとめて置く<small>1か所</small></span>
+        <span class="say">1つの画面に必要なものを、ひとかたまりにして保存する</span>
+      </li>
+      <li class="arrowline">かたまりごとに分けられるので</li>
+      <li>
+        <span class="node goal">台数を増やせる<small>そのかわり…</small></span>
+        <span class="say">自由な検索や、きっちりした整合性は、ゆずることになる</span>
+      </li>
+    </ol>
+  </div>
+  <p class="lead" style="margin-bottom:0">NoSQLは「速いデータベース」ではありません。<span class="pen">何かをゆずって、別の何かを手に入れた</span>データベースです。</p>
+</div>
+
+<section id="why">
+  <h2>なんで、こんなものが生まれたの？</h2>
+  <p class="lead">答えはシンプル。<span class="mark pink">表は、複数の機械にまたがると弱いから。</span></p>
+
+  <div class="notes">
+    <div class="note">
+      <h3>1台を大きくするやり方には、天井がある</h3>
+      <p>データが増えたときの最初の手は、機械を強いものに買いかえることです。ただ、この方法は「もう一段上」がなくなった瞬間に行き止まります。値段も、途中から急に跳ね上がります。</p>
+      <p class="eg">机が狭くなったとき、大きい机に買いかえる作戦。ある大きさから先は、そもそも部屋に入りません。</p>
+    </div>
+
+    <div class="note">
+      <h3>表を分けると、結合ができなくなる</h3>
+      <p>それなら机を何台も並べよう——となるのですが、表の世界では「ユーザー表」と「注文表」をつなげて1件の情報を組み立てます。この2つが別の台にあると、つなぐたびに機械どうしの通信が発生します。</p>
+      <p class="eg">台数を増やすほど速くなるはずが、つなぎ直す通信が増えて、かえって遅くなる。分けたのに分けきれていない状態です。</p>
+    </div>
+
+    <div class="note">
+      <h3>だから、最初からつながないで置く</h3>
+      <p>1つの画面に必要なものを、あらかじめ<strong>ひとかたまり</strong>にして保存します。つなぐ相手がいなければ、かたまり単位で好きな台に振り分けられます。</p>
+      <p class="eg">「あとで自由に組み合わせる」をあきらめる代わりに、「何台にでも分けられる」を手に入れる。NoSQLの取引はここです。</p>
+    </div>
+  </div>
+</section>
+
+<section id="compare">
+  <h2>表と、かたまり。何がちがう？</h2>
+  <p class="lead">ボタンで切りかえて、読みに行く場所の数を見てみよう。</p>
+
+  <div class="board">
+    <div class="switch">
+      <button type="button" id="btn-rdb" aria-pressed="true">表（RDB）</button>
+      <button type="button" id="btn-doc" aria-pressed="false">かたまり（NoSQL）</button>
+    </div>
+    <p class="tally" id="tally">注文1件を表示するのに読む場所　<b>4か所</b></p>
+    <figure style="margin:0">
+      <svg viewBox="0 0 600 250" role="img" aria-label="RDBでは注文1件の表示に4つの表を結合するが、ドキュメント型では1つのかたまりを読むだけで済むことを示す図">
+        <g font-family="'Zen Maru Gothic',sans-serif">
+
+          <g id="nq-rdb">
+            <text x="300" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#E4453A">1件のために、4つの表をつなぐ</text>
+
+            <line x1="180" y1="98" x2="230" y2="98" stroke="#16263F" stroke-width="2"/>
+            <line x1="370" y1="98" x2="420" y2="98" stroke="#16263F" stroke-width="2"/>
+            <line x1="300" y1="128" x2="300" y2="168" stroke="#16263F" stroke-width="2"/>
+
+            <g stroke="#16263F" stroke-width="2">
+              <rect x="40" y="68" width="140" height="60" rx="8" fill="#FDE6DC"/>
+              <rect x="230" y="68" width="140" height="60" rx="8" fill="#FFE066"/>
+              <rect x="420" y="68" width="140" height="60" rx="8" fill="#FDE6DC"/>
+              <rect x="230" y="168" width="140" height="60" rx="8" fill="#FDE6DC"/>
+            </g>
+            <g font-size="13" font-weight="700" fill="#16263F">
+              <text x="110" y="90" text-anchor="middle">ユーザー表</text>
+              <text x="300" y="90" text-anchor="middle">注文表</text>
+              <text x="490" y="90" text-anchor="middle">商品表</text>
+              <text x="300" y="190" text-anchor="middle">住所表</text>
+            </g>
+            <g font-size="11.5" fill="#16263F" font-family="'Zen Kaku Gothic New',sans-serif">
+              <text x="110" y="110" text-anchor="middle">id ／ 名前</text>
+              <text x="300" y="110" text-anchor="middle">id ／ ユーザーid</text>
+              <text x="490" y="110" text-anchor="middle">id ／ 商品名 ／ 値段</text>
+              <text x="300" y="210" text-anchor="middle">ユーザーid ／ 住所</text>
+            </g>
+            <text x="300" y="246" text-anchor="middle" font-size="12" fill="#54677E" font-family="'Zen Kaku Gothic New',sans-serif">4つが別々の台にあると、つなぐたびに機械どうしの通信が起きる</text>
+          </g>
+
+          <g id="nq-doc" class="hidden">
+            <text x="300" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#1E8A4C">1件は、はじめから1つのかたまり</text>
+
+            <rect x="120" y="44" width="360" height="168" rx="12" fill="#DDF3E5" stroke="#16263F" stroke-width="2"/>
+            <text x="300" y="68" text-anchor="middle" font-size="13" font-weight="700" fill="#16263F">注文ドキュメント（1件ぶん）</text>
+
+            <g stroke="#16263F" stroke-width="1.5" fill="#fff">
+              <rect x="140" y="80" width="320" height="28" rx="6"/>
+              <rect x="140" y="114" width="320" height="40" rx="6"/>
+              <rect x="140" y="160" width="320" height="40" rx="6"/>
+            </g>
+            <g font-size="12" fill="#16263F" font-family="'Zen Kaku Gothic New',sans-serif">
+              <text x="152" y="99">注文番号 ／ 注文日</text>
+              <text x="152" y="132" font-weight="700">買った人</text>
+              <text x="152" y="148">名前・住所を、そのまま中に持つ</text>
+              <text x="152" y="178" font-weight="700">買ったもの</text>
+              <text x="152" y="194">商品名と値段を、並べて中に持つ</text>
+            </g>
+            <text x="300" y="234" text-anchor="middle" font-size="12" fill="#54677E" font-family="'Zen Kaku Gothic New',sans-serif">つなぐ相手がいないので、かたまりごとに好きな台へ置ける</text>
+          </g>
+        </g>
+      </svg>
+      <figcaption>読むのは速くなりますが、そのぶん同じ情報（たとえば住所）が何件ものかたまりに入りこみます。直すときに全部を直さないといけないのは、この形の代償です。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="kinds">
+  <h2>NoSQLは、1つの製品じゃない</h2>
+  <p class="lead">よく使われるのは、この4つの置き方。<span class="pen">どれも「表をやめた」だけで、中身はぜんぜん違います。</span></p>
+
+  <div class="notes">
+    <div class="note">
+      <h3>キー・バリュー型</h3>
+      <p>合言葉（キー）を渡すと、中身（バリュー）が返ってくる。それだけ。ロッカーの番号札のような使い方で、いちばん単純で、いちばん速い形です。</p>
+      <p class="eg">向いているのは、ログイン状態の保管や、計算結果の一時置き場。中身で探すことはできません。</p>
+    </div>
+    <div class="note">
+      <h3>ドキュメント型</h3>
+      <p>1件ぶんのデータを、入れ子のある1つのかたまり（JSONのような形）で持ちます。NoSQLと聞いて多くの人が想像するのは、たいていこれです。</p>
+      <p class="eg">商品情報のように、品目ごとに項目が違うものと相性がいい。中身の項目を条件に探すこともできます。</p>
+    </div>
+    <div class="note">
+      <h3>列指向（ワイドカラム）型</h3>
+      <p>行ごとに列がそろっていなくてよく、列の数が何万あってもかまわない形。膨大な書き込みを、たくさんの台で受けとめるのが得意です。</p>
+      <p class="eg">センサーの記録や、時刻つきの大量ログなど。「とにかく書き込む」が主役の場面で使われます。</p>
+    </div>
+    <div class="note">
+      <h3>グラフ型</h3>
+      <p>点（もの）と線（関係）でデータを持ちます。ほかの3つと違い、<strong>つながりを追うこと</strong>そのものが得意な形です。</p>
+      <p class="eg">「友だちの友だち」「この部品を使っている製品」など、何段もたどる問い合わせが、表よりずっと素直に書けます。</p>
+    </div>
+  </div>
+</section>
+
+<section id="calc">
+  <h2>台数を増やすと、どこまで受けとめられる？</h2>
+  <p class="lead">サーバーの台数と、1台がさばける書き込みを選んでみよう。</p>
+  <div class="calcbox">
+    <div class="calcrow">
+      <div>
+        <label for="srv">サーバーの台数</label>
+        <select id="srv"></select>
+      </div>
+      <div>
+        <label for="tps">1台がさばける書き込み</label>
+        <select id="tps"></select>
+      </div>
+    </div>
+    <div class="result" id="calc-result"></div>
+  </div>
+</section>
+
+<section id="flow">
+  <h2>NoSQLを使うときの順番</h2>
+  <p class="lead">表のときとは、考える順番が逆になります。<span class="pen">タップして開いてみよう。</span></p>
+
+  <div class="tree">
+    <h3>読み方を決めてから、置き方を決める</h3>
+    <div class="step-list" id="tree-flow"></div>
+  </div>
+</section>
+
+<section id="terms">
+  <h2>まちがえやすい3つ</h2>
+  <p class="lead">ここを取りちがえると、話が噛み合わなくなります。</p>
+  <div class="notes">
+    <div class="note">
+      <h3>「SQLが使えない」という意味ではない</h3>
+      <p>NoSQL は <span class="mark cyan">Not only SQL</span>（SQLだけじゃない）と読むのが今の一般的な理解です。SQLに似た問い合わせ言語を持つ製品もたくさんあります。</p>
+      <p class="eg">否定しているのは言語ではなく、「すべてを表の形に押しこむ」という前提のほうです。</p>
+    </div>
+    <div class="note">
+      <h3>「スキーマレス」は、決めなくていいではない</h3>
+      <p>データベースが形をチェックしてくれないだけで、形が要らないわけではありません。決まりごとは<span class="mark cyan">アプリ側が背負う</span>ことになります。</p>
+      <p class="eg">古い形と新しい形が混ざったまま何年も動く、というのはよくある話。読む側が両方に耐えられるように書いておく必要があります。</p>
+    </div>
+    <div class="note">
+      <h3>表より速い、わけではない</h3>
+      <p>速く見えるのは、読む形のまま置いてあるからです。同じデータに別の角度から問い合わせると、表のほうが速いことも普通にあります。</p>
+      <p class="eg">「NoSQLにすれば速くなる」ではなく、「この読み方に合わせて置いたから速い」。合っていない読み方をすれば、当然遅くなります。</p>
+    </div>
+  </div>
+</section>
+
+<section id="quiz">
+  <h2>クイズ：きみは何問わかる？</h2>
+  <p class="lead">全5問。まちがえても大丈夫、答えのほうが面白い。</p>
+  <div class="quiz" id="quiz"></div>
+</section>
+
+<section id="careful">
+  <h2>気をつけないと、あとで困る</h2>
+  <p class="lead">自由に見えるぶん、あとから効いてくる制約があります。</p>
+  <ol class="steps">
+    <li><b>読み方を決めずに、置き方は決められない。</b>表のように「とりあえず正規化して入れておく」ができません。どの画面で、どうやって取り出すかを先に決めます。</li>
+    <li><b>同じ情報を、何か所にも持つことになる。</b>まとめて置くとは、そういうことです。住所ひとつ直すのに、何件ものかたまりを直す必要が出てきます。</li>
+    <li><b>「すぐには揃わない」を前提に画面を作る。</b>台数を分けている以上、書いた直後にほかの台へ反映されていないことがあります（結果整合性）。</li>
+    <li><b>キーの選び方で、1台に集中する。</b>日付をキーにすると、その日の書き込みが1台に集まります（ホットスポット）。分かれるキーを選ぶのが設計の要です。</li>
+    <li><b>あとから条件を足しにくい。</b>「やっぱりこの項目でも検索したい」が、表ほど気軽にできません。索引を足す、置き方を変えるなど、影響が大きくなりがちです。</li>
+    <li><b>まとめて書ける範囲を確認する。</b>複数のかたまりをまたぐ更新を、どこまで安全に扱えるかは製品ごとに違います。使う前に必ず確認します。</li>
+  </ol>
+</section>
+
+<section id="words">
+  <h2>ことばのミニ辞典</h2>
+  <p class="lead">この先どこかで見かけたときのために。</p>
+  <dl class="words">
+    <dt>NoSQL</dt>
+    <dd>表の形にこだわらないデータベースの総称。Not only SQL（SQLだけじゃない）と読むのが今の一般的な理解。</dd>
+    <dt>RDB（リレーショナルデータベース）</dt>
+    <dd>行と列の表でデータを持ち、表どうしをつないで使うデータベース。長いあいだ、データベースといえばこれだった。</dd>
+    <dt>ドキュメント</dt>
+    <dd>1件ぶんのデータを、入れ子のある1つのかたまりで表したもの。JSONのような形をしている。</dd>
+    <dt>キー・バリュー</dt>
+    <dd>合言葉（キー）を渡すと中身（バリュー）が返る、いちばん単純な置き方。中身で探すことはできない。</dd>
+    <dt>シャーディング</dt>
+    <dd>データをキーで分けて、複数の台に振り分けること。台数を増やして量をさばくための基本のやり方。</dd>
+    <dt>レプリケーション</dt>
+    <dd>同じデータの写しを、別の台にも持つこと。1台が落ちても読み書きを続けられるようにする。</dd>
+    <dt>結果整合性</dt>
+    <dd>書いた直後はバラつくが、しばらくすれば全部の台で同じになる、という考え方。すぐ揃うことをあきらめる代わりに、止まりにくくする。</dd>
+    <dt>スキーマレス</dt>
+    <dd>データの形をデータベース側で決めておかないこと。チェックしてくれないだけで、形の管理はアプリ側の仕事になる。</dd>
+    <dt>ホットスポット</dt>
+    <dd>分けたはずのアクセスが、特定の1台に集中してしまう状態。キーの選び方をまちがえると起きる。</dd>
+    <dt>CAP定理</dt>
+    <dd>ネットワークが分断されたとき、「全部の台で同じ答え」と「止まらないこと」は同時に満たせない、という整理。NoSQLの多くは後者を選んでいる。</dd>
+  </dl>
+</section>
+
+<section class="sibling">
+  <h2>ほかの解説ページ</h2>
+  <ul>
+    <li><a href="mcp.html"><b>MCPのしくみ</b><span>AIは、外の道具を借りて動いている。</span></a></li>
+    <li><a href="cicd.html"><b>CI/CDのしくみ</b><span>直したものを、こわがらずに届けるために。</span></a></li>
+    <li><a href="websocket.html"><b>WebSocketのしくみ</b><span>「まだ？」と聞きに行かなくてよくなった日。</span></a></li>
+    <li><a href="flyway.html"><b>Flywayのしくみ</b><span>データベースだけ、やり直しがきかない。</span></a></li>
+    <li><a href="getdown.html"><b>Getdownのしくみ</b><span>配ったあとに、直せるようにする。</span></a></li>
+    <li><a href="angular.html"><b>Angularのしくみ</b><span>画面を、部品に切り分ける。</span></a></li>
+    <li><a href="bigip.html"><b>BIG-IPのしくみ</b><span>入口を1つにして、裏を何台にでも。</span></a></li>
+    <li><a href="spring.html"><b>Springのしくみ</b><span>部品の組み立てを、任せてしまう。</span></a></li>
+    <li><a href="docker.html"><b>Dockerのしくみ</b><span>「私のPCでは動く」を、なくすために。</span></a></li>
+    <li><a href="kubernetes.html"><b>Kubernetesのしくみ</b><span>落ちたら、勝手に起き上がる。</span></a></li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <p>NoSQL を、たとえ話・図解・クイズでたどるやさしい解説ページです。製品ごとの細かな違いは、それぞれの公式ドキュメントをどうぞ。</p>
+  <p class="footmeta">最終更新日: 2026.9.7 ｜ 参考文献: <a href="https://www.mongodb.com/docs/manual/" target="_blank" rel="noopener">MongoDB 公式ドキュメント</a> ／ <a href="https://docs.aws.amazon.com/ja_jp/amazondynamodb/latest/developerguide/Introduction.html" target="_blank" rel="noopener">Amazon DynamoDB 開発者ガイド</a></p>
+  <p class="footver">NoSQLのしくみ　v1.0.0</p>
+</footer>
+
+</div>
+
+<script>
+"use strict";
+var APP_VERSION = "1.0.0";
+
+function initSwitch(){
+  var rdb = document.getElementById("nq-rdb");
+  var doc = document.getElementById("nq-doc");
+  var rBtn = document.getElementById("btn-rdb");
+  var dBtn = document.getElementById("btn-doc");
+  var tally = document.getElementById("tally");
+  if(!rdb || !doc) return;
+
+  function show(isRdb){
+    rdb.classList.toggle("hidden", !isRdb);
+    doc.classList.toggle("hidden", isRdb);
+    rBtn.setAttribute("aria-pressed", isRdb ? "true" : "false");
+    dBtn.setAttribute("aria-pressed", isRdb ? "false" : "true");
+    tally.innerHTML = isRdb
+      ? '注文1件を表示するのに読む場所　<b>4か所</b>'
+      : '注文1件を表示するのに読む場所　<b>1か所</b>';
+  }
+  rBtn.addEventListener("click", function(){ show(true); });
+  dBtn.addEventListener("click", function(){ show(false); });
+}
+
+function initCalc(){
+  var s = document.getElementById("srv");
+  var t = document.getElementById("tps");
+  var res = document.getElementById("calc-result");
+  if(!s || !t) return;
+
+  [1,3,5,10,20,50].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v + "台";
+    if(v === 10) o.selected = true;
+    s.appendChild(o);
+  });
+  [100,500,1000,5000].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v + "件/秒";
+    if(v === 1000) o.selected = true;
+    t.appendChild(o);
+  });
+
+  function update(){
+    var n = parseInt(s.value, 10);
+    var per = parseInt(t.value, 10);
+    var one = per;                  // 書き込みを1台で受ける方式
+    var many = per * n;             // かたまりごとに分けて受ける方式
+    var max = Math.max(one, many);
+
+    var html = '<p class="rline">書き込みを1台で受けるなら <strong>' + one +
+               '件/秒</strong>、' + n + '台に分けて受けるなら <strong>' + many +
+               '件/秒</strong>（うまく分かれた場合）。</p>';
+
+    html += '<div class="bars">';
+    html += '<div><p class="bar-label">表を1台で受ける　台数を増やしても書き込みは増えない</p>' +
+            '<div class="bar"><span style="width:' + (one / max * 100) + '%"></span></div></div>';
+    html += '<div><p class="bar-label">かたまりごとに分けて受ける　' + n + '台ぶん</p>' +
+            '<div class="bar good"><span style="width:' + (many / max * 100) + '%"></span></div></div>';
+    html += '</div>';
+
+    html += '<p class="rline" style="margin:0">差が生まれる理由は1つだけ、' +
+            '<span class="pen">書き込みの受け口が1つか、台数ぶんあるか</span>です。' +
+            (n === 1
+              ? 'ただし1台なら、どちらの方式でも同じ。台数を増やせないうちは、NoSQLにする理由もありません。'
+              : 'ただし、そのまま台数倍にはなりません。キーの選び方が悪いと、書き込みが特定の1台に集まって、' + one + '件/秒に張りついたままになります。') +
+            '</p>';
+    res.innerHTML = html;
+  }
+
+  s.addEventListener("change", update);
+  t.addEventListener("change", update);
+  update();
+}
+
+var FLOW = [
+  {y:"①", n:"どう読むかを、先に決める", t:"置き方から決めてしまうと、<b>いちばん出したい画面が、いちばん重くなる</b>。", f:"「注文履歴を1件ぶん出す」など、実際に必要な取り出し方を先に書き出す。NoSQLの設計は、ここから始まる。"},
+  {y:"②", n:"キーを決める", t:"適当なキーにすると、<b>特定の1台にアクセスが集中する</b>。日付だけのキーが典型例。", f:"何で分けるか（＝どの台に置くか）を決める。ばらけること、そして探すときに必ず分かることの両方が要る。"},
+  {y:"③", n:"使う形のまま、まとめて置く", t:"表のように分けて置くと、<b>読むたびに何か所も訪ねる</b>ことになる。", f:"1回で読みたいものを、1つのかたまりに入れる。同じ情報が重複するのは、承知のうえで受け入れる。"},
+  {y:"④", n:"台数を増やして、分けて持つ", t:"1台に置いたままだと、<b>そもそもNoSQLにした意味がない</b>。", f:"キーごとに台へ振り分け（シャーディング）、写しも別の台に持つ（レプリケーション）。増やすときは台を足すだけになる。"},
+  {y:"⑤", n:"揃うまでの時間を、決めておく", t:"どこでも即座に一致させようとすると、<b>1台落ちただけで全体が止まる</b>。", f:"「書いた直後は少しズレる」を許すのか、この操作だけは許さないのかを決める。画面の作り方も、それに合わせる。"}
+];
+
+function buildFlow(){
+  var host = document.getElementById("tree-flow");
+  if(!host) return;
+  FLOW.forEach(function(s, i){
+    var wrap = document.createElement("div");
+    wrap.className = "step";
+    wrap.setAttribute("aria-expanded","false");
+    var btnId = "flow-btn-" + i, panId = "flow-pan-" + i;
+
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.id = btnId;
+    btn.setAttribute("aria-controls", panId);
+    btn.setAttribute("aria-expanded","false");
+    btn.innerHTML = '<span class="yr">' + s.y + '</span><span class="nm">' + s.n +
+                    '</span><span class="plus" aria-hidden="true"></span>';
+
+    var pan = document.createElement("div");
+    pan.className = "detail"; pan.id = panId; pan.hidden = true;
+    pan.setAttribute("role","region");
+    pan.setAttribute("aria-labelledby", btnId);
+    pan.innerHTML = '<p class="trouble">😖 これがないと：' + s.t + '</p>' +
+                    '<p class="fix">💡 やっていること：' + s.f + '</p>';
+
+    btn.addEventListener("click", function(){
+      var open = pan.hidden;
+      pan.hidden = !open;
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      wrap.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    wrap.appendChild(btn); wrap.appendChild(pan); host.appendChild(wrap);
+  });
+}
+
+var QUIZ = [
+  {
+    q:"「NoSQL」という名前は、何を指している？",
+    c:["SQLが使えないこと","表の形にこだわらないデータベースの総称","1つの製品名","新しいSQLの版"],
+    a:1,
+    e:"Not only SQL（SQLだけじゃない）と読むのが今の一般的な理解です。ドキュメント型・キーバリュー型・列指向型・グラフ型など、中身のまったく違うものをまとめて呼んでいます。"
+  },
+  {
+    q:"表を複数の台に分けると、何が起きる？",
+    c:["何も変わらない","表どうしをつなぐたびに、機械間の通信が増える","データが消える","SQLが書けなくなる"],
+    a:1,
+    e:"表の世界では、1件の情報を組み立てるのに複数の表をつなぎます。つなぐ相手が別の台にいると、そのたびに通信が発生します。NoSQLは「はじめからつながない」ことでこれを避けています。"
+  },
+  {
+    q:"ドキュメント型で、同じ住所が何件ものかたまりに入っている。これは？",
+    c:["設計ミス","まとめて置く形の、想定内の代償","データの破損","自動で1つにまとまる"],
+    a:1,
+    e:"1回で読めるようにまとめた結果です。読むのは速くなりますが、住所を直すときは全部を直す必要があります。この重複を引き受けるかどうかが判断の分かれ目です。"
+  },
+  {
+    q:"シャーディングのキーに「日付」を選ぶと、何が困る？",
+    c:["日付が保存できない","その日の書き込みが1台に集中する","検索が速くなりすぎる","台数を増やせない"],
+    a:1,
+    e:"ホットスポットと呼ばれる状態です。台数を増やしても、書き込みは1台ぶんのまま。ばらけるキーを選ぶことが、NoSQL設計でいちばん効きます。"
+  },
+  {
+    q:"「結果整合性」とは、どういう考え方？",
+    c:["いつまでも揃わない","書いた直後はズレるが、しばらくすれば揃う","絶対に揃うまで待つ","整合性を捨てる"],
+    a:1,
+    e:"すぐ揃うことをあきらめる代わりに、1台落ちても止まらないほうを取る、という選択です。画面の側も「今の表示は少し前かもしれない」を前提に作ります。"
+  }
+];
+
+var qIndex = 0, qScore = 0;
+
+function renderQuiz(){
+  var host = document.getElementById("quiz");
+  if(!host) return;
+
+  if(qIndex >= QUIZ.length){
+    var msg = qScore === 5 ? "全問正解。もう人に説明できるレベル。"
+            : qScore >= 3 ? "いい線いってる。まちがえた問題ほど、覚えて帰れる。"
+            : "ここからが面白いところ。上の5ステップをもう一度ひらいてみよう。";
+    host.innerHTML = '<p class="score">結果：' + qScore + ' / ' + QUIZ.length + ' 問正解</p>' +
+                     '<p style="margin:0 0 14px">' + msg + '</p>' +
+                     '<button class="qnext" type="button" id="again">もう一度やる</button>';
+    document.getElementById("again").addEventListener("click", function(){
+      qIndex = 0; qScore = 0; renderQuiz();
+    });
+    return;
+  }
+
+  var item = QUIZ[qIndex];
+  var html = '<div class="qhead"><span class="qcount">第' + (qIndex+1) + '問 / ' + QUIZ.length + '問</span></div>' +
+             '<p class="qtext">' + item.q + '</p><div class="choices">';
+  item.c.forEach(function(text, i){
+    html += '<button class="choice" type="button" data-i="' + i + '">' + text + '</button>';
+  });
+  html += '</div><div class="answer" id="answer" hidden></div>';
+  host.innerHTML = html;
+
+  var buttons = host.querySelectorAll(".choice");
+  Array.prototype.forEach.call(buttons, function(b){
+    b.addEventListener("click", function(){
+      var picked = parseInt(b.dataset.i, 10);
+      var ok = picked === item.a;
+      if(ok) qScore++;
+
+      Array.prototype.forEach.call(buttons, function(x, i){
+        x.disabled = true;
+        if(i === item.a) x.classList.add("correct");
+        else if(i === picked) x.classList.add("wrong");
+      });
+
+      var ans = document.getElementById("answer");
+      ans.hidden = false;
+      ans.innerHTML = '<span class="verdict ' + (ok ? "ok" : "ng") + '">' +
+                      (ok ? "正解！" : "残念、正解は「" + item.c[item.a].replace(/<[^>]+>/g,"") + "」") + '</span>' +
+                      item.e +
+                      '<div><button class="qnext" type="button" id="next">' +
+                      (qIndex === QUIZ.length - 1 ? "結果を見る" : "次の問題へ") + '</button></div>';
+      document.getElementById("next").addEventListener("click", function(){
+        qIndex++; renderQuiz();
+      });
+      document.getElementById("next").focus();
+    });
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  document.getElementById("version").textContent = "v" + APP_VERSION;
+  initSwitch();
+  initCalc();
+  buildFlow();
+  renderQuiz();
+});
+</script>
+</body>
+</html>
