@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWSのしくみ — サーバーを、買わずに借りる</title>
+<meta name="description" content="AWS（EC2・ECS・ELB・RDS）を、たとえ話・図解・クイズでたどるやさしい解説ページ。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="topbar">
+  <span class="logo">AWSのしくみ</span>
+  <span class="ver" id="version">v1.0.0</span>
+  <a class="home" href="index.html">← 用語集トップ</a>
+</header>
+
+<main>
+
+<div class="hero" id="basic">
+  <h1>サーバーを、<br><span class="mark">買わずに借りる</span>。</h1>
+  <p>むかしは、サービスを1つ始めるのに機械を買うところからでした。見積もりを取り、届くのを待ち、置き場所と電源と回線を用意する。<strong>AWS</strong> は、その一式を「申し込んだら数分で使えて、要らなくなったら返せるもの」に変えました。返した瞬間から、お金もかからなくなります。</p>
+
+  <div class="chain">
+    <p class="chain-title">申し込みから、サービスが動きだすまで——</p>
+    <ol>
+      <li>
+        <span class="node now">借りる<small>いま</small></span>
+        <span class="say">画面から「この大きさの機械を1台」と頼むと、数分で使える状態になる（EC2）</span>
+      </li>
+      <li class="arrowline">1台だと、落ちたら終わりなので</li>
+      <li>
+        <span class="node">増やす<small>台数を横に</small></span>
+        <span class="say">同じものを何台か並べ、前に受付を置いて振り分ける（ELB）</span>
+      </li>
+      <li class="arrowline">アプリの置き方も、箱で統一したくなって</li>
+      <li>
+        <span class="node robot">任せる<small>自動</small></span>
+        <span class="say">コンテナを「どこに何個」だけ決めて、置き場所の世話は任せる（ECS）</span>
+      </li>
+      <li class="arrowline">消えて困るデータだけは、別あつかい</li>
+      <li>
+        <span class="node goal">預ける<small>壊れても残る</small></span>
+        <span class="say">データベースは専用の場所に置き、バックアップや故障時の切りかえも任せる（RDS）</span>
+      </li>
+    </ol>
+  </div>
+  <p class="lead" style="margin-bottom:0">今日おぼえて帰るのは、この<span class="pen">4つの役どころ</span>だけで大丈夫。</p>
+</div>
+
+<section id="why">
+  <h2>なんで、こんなものが生まれたの？</h2>
+  <p class="lead">答えはシンプル。<span class="mark pink">機械を買うと、あとから変えられないから。</span></p>
+
+  <div class="notes">
+    <div class="note">
+      <h3>使う量は、始める前にはわからない</h3>
+      <p>買うときは「どれくらい来るか」を先に決めなければいけません。小さく買えば足りなくなり、大きく買えば余ります。どちらに転んでも、当たることのほうが少ないのです。</p>
+      <p class="eg">当てにいった見積もりが外れると、次の機械が届くまでの数週間、打つ手がありません。</p>
+    </div>
+
+    <div class="note">
+      <h3>いちばん混む日に、大きさを合わせてしまう</h3>
+      <p>年に数回のピークに耐えられるようそろえると、残りの364日は、そのほとんどが遊んでいます。電気代も置き場所代も、遊んでいるあいだも同じだけかかります。</p>
+      <p class="eg">「念のため多めに」は、買う世界ではずっと払い続ける約束になります。</p>
+    </div>
+
+    <div class="note">
+      <h3>だから、必要なときに必要なぶんだけ借りる</h3>
+      <p>借りる形なら、混む日だけ台数を増やして、終わったら返せます。払うのは使ったぶんだけ。読みを外しても、あとから直せます。</p>
+      <p class="eg">クラウドのいちばんの利点は「安い」ことではなく、<b>決め打ちしなくてよくなる</b>ことです。</p>
+    </div>
+  </div>
+</section>
+
+<section id="shape">
+  <h2>よくある形は、この4つの重なり</h2>
+  <p class="lead">名前は多いけれど、はじめに出会うのはたいていこの並びです。</p>
+
+  <div class="board">
+    <figure style="margin:0">
+      <svg viewBox="0 0 600 260" role="img" aria-label="利用者からELB、EC2やECSで動くアプリ、RDSのデータベースへとつながる構成図">
+        <g font-family="'Zen Maru Gothic',sans-serif">
+          <rect x="210" y="8" width="180" height="34" rx="10" fill="#fff" stroke="#16263F" stroke-width="2"/>
+          <text x="300" y="30" text-anchor="middle" font-size="13" font-weight="700" fill="#16263F">利用者たち</text>
+
+          <g stroke="#16263F" stroke-width="2" fill="none">
+            <path d="M300 42 L300 62"/>
+            <path d="M300 100 L300 116 L130 116 L130 132"/>
+            <path d="M300 100 L300 132"/>
+            <path d="M300 100 L300 116 L470 116 L470 132"/>
+            <path d="M130 182 L130 196 L300 196"/>
+            <path d="M470 182 L470 196 L300 196"/>
+            <path d="M300 182 L300 200"/>
+          </g>
+
+          <rect x="180" y="62" width="240" height="38" rx="10" fill="#D3C4F2" stroke="#16263F" stroke-width="2"/>
+          <text x="300" y="79" text-anchor="middle" font-size="13.5" font-weight="700" fill="#16263F">ELB（入口の受付）</text>
+          <text x="300" y="94" text-anchor="middle" font-size="11.5" font-family="'Zen Kaku Gothic New',sans-serif" fill="#16263F">受けて、空いている台へ渡す</text>
+
+          <g fill="#AEE6A6" stroke="#16263F" stroke-width="2">
+            <rect x="62" y="132" width="136" height="50" rx="10"/>
+            <rect x="232" y="132" width="136" height="50" rx="10"/>
+            <rect x="402" y="132" width="136" height="50" rx="10"/>
+          </g>
+          <g font-size="13" font-weight="700" fill="#16263F">
+            <text x="130" y="153" text-anchor="middle">EC2 ／ ECS</text>
+            <text x="300" y="153" text-anchor="middle">EC2 ／ ECS</text>
+            <text x="470" y="153" text-anchor="middle">EC2 ／ ECS</text>
+          </g>
+          <g font-size="11.5" font-family="'Zen Kaku Gothic New',sans-serif" fill="#16263F">
+            <text x="130" y="171" text-anchor="middle">アプリが動く台</text>
+            <text x="300" y="171" text-anchor="middle">アプリが動く台</text>
+            <text x="470" y="171" text-anchor="middle">アプリが動く台</text>
+          </g>
+
+          <rect x="180" y="200" width="240" height="46" rx="10" fill="#9BDDF3" stroke="#16263F" stroke-width="2"/>
+          <text x="300" y="220" text-anchor="middle" font-size="13.5" font-weight="700" fill="#16263F">RDS（データの置き場）</text>
+          <text x="300" y="236" text-anchor="middle" font-size="11.5" font-family="'Zen Kaku Gothic New',sans-serif" fill="#16263F">主の1台が倒れたら、副に切りかわる</text>
+        </g>
+      </svg>
+      <figcaption>上から順に「受ける・処理する・しまう」。アプリの台は増やしたり捨てたりできますが、データの置き場だけは捨てられません。だから別あつかいにして、専用のサービスに預けます。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="ec2ecs">
+  <h2>EC2とECSは、何がちがう？</h2>
+  <p class="lead">よく混ざる2つ。ボタンで切りかえて、自分の担当ぶんを見てみよう。</p>
+
+  <div class="board">
+    <div class="switch">
+      <button type="button" id="btn-ec2" aria-pressed="true">EC2に自分で載せる</button>
+      <button type="button" id="btn-ecs" aria-pressed="false">ECSに箱で載せる</button>
+    </div>
+    <p class="tally" id="tally">OSの入れかえや更新　<b>自分</b></p>
+    <figure style="margin:0">
+      <svg viewBox="0 0 600 236" role="img" aria-label="EC2では利用者がOSやミドルウェアまで面倒を見るのに対し、ECSではコンテナの中身だけを見ればよいことを示す図">
+        <g font-family="'Zen Maru Gothic',sans-serif">
+          <g id="aw-ec2">
+            <text x="300" y="22" text-anchor="middle" font-size="14" font-weight="700" fill="#E4453A">この3段は、自分で入れて自分で直す</text>
+            <rect x="56" y="34" width="488" height="132" rx="12" fill="#FDE6DC" stroke="#16263F" stroke-width="2"/>
+            <text x="300" y="52" text-anchor="middle" font-size="12.5" font-weight="700" fill="#16263F">EC2 ＝ 借りたサーバー1台</text>
+            <g fill="#fff" stroke="#16263F" stroke-width="1.5">
+              <rect x="76" y="60" width="448" height="30" rx="6"/>
+              <rect x="76" y="94" width="448" height="30" rx="6"/>
+              <rect x="76" y="128" width="448" height="30" rx="6"/>
+            </g>
+            <g font-size="12.5" font-family="'Zen Kaku Gothic New',sans-serif" fill="#16263F">
+              <text x="300" y="80" text-anchor="middle">アプリ</text>
+              <text x="300" y="114" text-anchor="middle">実行環境・ミドルウェア（版そろえも自分で）</text>
+              <text x="300" y="148" text-anchor="middle">OSの設定・セキュリティ更新</text>
+            </g>
+            <rect x="56" y="176" width="488" height="40" rx="10" fill="#EEF3F8" stroke="#16263F" stroke-width="2"/>
+            <text x="300" y="201" text-anchor="middle" font-size="12.5" font-weight="700" fill="#16263F">AWSの担当：機械・電気・回線・置き場所</text>
+          </g>
+
+          <g id="aw-ecs" class="hidden">
+            <text x="300" y="22" text-anchor="middle" font-size="14" font-weight="700" fill="#1E8A4C">見るのは箱の中身だけ。置き場は任せる</text>
+            <g fill="#DDF3E5" stroke="#16263F" stroke-width="2">
+              <rect x="66" y="34" width="146" height="60" rx="10"/>
+              <rect x="227" y="34" width="146" height="60" rx="10"/>
+              <rect x="388" y="34" width="146" height="60" rx="10"/>
+            </g>
+            <g font-size="12.5" font-weight="700" fill="#16263F">
+              <text x="139" y="58" text-anchor="middle">コンテナ</text>
+              <text x="300" y="58" text-anchor="middle">コンテナ</text>
+              <text x="461" y="58" text-anchor="middle">コンテナ</text>
+            </g>
+            <g font-size="11.5" font-family="'Zen Kaku Gothic New',sans-serif" fill="#16263F">
+              <text x="139" y="78" text-anchor="middle">アプリ＋必要な部品</text>
+              <text x="300" y="78" text-anchor="middle">アプリ＋必要な部品</text>
+              <text x="461" y="78" text-anchor="middle">アプリ＋必要な部品</text>
+            </g>
+            <rect x="56" y="106" width="488" height="38" rx="10" fill="#D3C4F2" stroke="#16263F" stroke-width="2"/>
+            <text x="300" y="130" text-anchor="middle" font-size="12.5" font-weight="700" fill="#16263F">ECS：どこに何個置くか、落ちたら置き直すかを決める係</text>
+            <rect x="56" y="154" width="488" height="62" rx="10" fill="#EEF3F8" stroke="#16263F" stroke-width="2"/>
+            <text x="300" y="180" text-anchor="middle" font-size="12.5" font-weight="700" fill="#16263F">置き場：EC2の群れ ／ Fargate</text>
+            <text x="300" y="200" text-anchor="middle" font-size="11.5" font-family="'Zen Kaku Gothic New',sans-serif" fill="#16263F">Fargateを選ぶと、台そのものを意識しなくてよくなる</text>
+          </g>
+        </g>
+      </svg>
+      <figcaption>EC2は「置き場（サーバー1台）」、ECSは「置き方（コンテナをどこに何個置くか）」の話です。ECSの下でEC2が動いていることもあるので、二者択一ではありません。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="calc">
+  <h2>ピークに合わせて買うと、どうなる？</h2>
+  <p class="lead">平常時とピーク時の台数を選んでみよう。<span class="pen">単価は1台あたり月1万円と仮定</span>、ピークは月の1割の時間だけとして計算します。</p>
+  <div class="calcbox">
+    <div class="calcrow">
+      <div>
+        <label for="base">平常時に必要な台数</label>
+        <select id="base"></select>
+      </div>
+      <div>
+        <label for="peak">ピーク時に必要な台数</label>
+        <select id="peak"></select>
+      </div>
+    </div>
+    <div class="result" id="calc-result"></div>
+  </div>
+</section>
+
+<section id="flow">
+  <h2>リクエストが1本、届いて返るまで</h2>
+  <p class="lead">画面のボタンを押してから、答えが返るまでの5歩。<span class="pen">タップして開いてみよう。</span></p>
+
+  <div class="tree">
+    <h3>押してから、返ってくるまで</h3>
+    <div class="step-list" id="tree-flow"></div>
+  </div>
+</section>
+
+<section id="terms">
+  <h2>まちがえやすい3つ</h2>
+  <p class="lead">ここを取りちがえると、話が噛み合わなくなります。</p>
+  <div class="notes">
+    <div class="note">
+      <h3>EC2とECSは、並べて選ぶものではない</h3>
+      <p>EC2は<span class="mark cyan">借りたサーバーそのもの</span>、ECSは<span class="mark cyan">コンテナをどこに何個置くかを決める係</span>です。ECSの置き場としてEC2を使うこともあります。</p>
+      <p class="eg">「EC2にするかECSにするか」ではなく、「1台に自分で載せるか、箱にして置き方ごと任せるか」で考えると迷いません。</p>
+    </div>
+    <div class="note">
+      <h3>ELBは、ただの振り分け役ではない</h3>
+      <p>振り分けと同時に、各台が生きているかを見張っています。返事をしない台は自動で外され、直れば戻されます。暗号化通信を入口で解く役も持てます。</p>
+      <p class="eg">「1台落ちても止まらない」は台数のおかげではなく、落ちた台を外してくれる見張りがいるおかげです。</p>
+    </div>
+    <div class="note">
+      <h3>RDSは「別のデータベース」ではない</h3>
+      <p>中身は MySQL や PostgreSQL などのままです。ちがうのは、入れかえ・バックアップ・故障時の切りかえといった<b>世話の部分を任せられる</b>ところ。</p>
+      <p class="eg">その代わり、機械に入って好きな設定ファイルを書く、といった自由は減ります。任せるとは、そういう取り引きです。</p>
+    </div>
+  </div>
+</section>
+
+<section id="quiz">
+  <h2>クイズ：きみは何問わかる？</h2>
+  <p class="lead">全5問。まちがえても大丈夫、答えのほうが面白い。</p>
+  <div class="quiz" id="quiz-box"></div>
+</section>
+
+<section id="careful">
+  <h2>気をつけないと、あとで困る</h2>
+  <p class="lead">数分で借りられるということは、数分で事故も作れるということです。</p>
+  <ol class="steps">
+    <li><b>1か所にまとめない。</b>アプリの台もデータベースも、同じ建物（アベイラビリティゾーン）だけに置くと、その建物ごと落ちたときに全部止まります。最低でも2か所に分けます。</li>
+    <li><b>入口を開けっぱなしにしない。</b>「とりあえず全部許可」で作ると、世界中から入れる状態になります。開けるのは必要な相手と必要な口だけにします。</li>
+    <li><b>権限は、最初から絞る。</b>強い権限の鍵を配ると、漏れたときの被害が青天井になります。人にもプログラムにも、要る操作だけを許すのが基本です（IAM）。</li>
+    <li><b>お金の見張りを付ける。</b>借りたものは、使っていなくても動いていれば課金されます。上限の警告を設定し、消し忘れを定期的に探します。</li>
+    <li><b>バックアップは、戻せて初めて意味がある。</b>取れている、と思っていて戻せなかった例は珍しくありません。復旧の練習を一度やってから安心します。</li>
+    <li><b>名前と札を決めておく。</b>誰が何のために作ったかわからない資源は、消すことも増やすこともできなくなります。命名とタグの規則を、増える前に決めます。</li>
+  </ol>
+</section>
+
+<section id="words">
+  <h2>ことばのミニ辞典</h2>
+  <p class="lead">この先どこかで見かけたときのために。</p>
+  <dl class="words">
+    <dt>EC2</dt>
+    <dd>Elastic Compute Cloud。必要なときに借りられる仮想サーバー。OSから上は自分で面倒を見る、いちばん自由度の高い借り方。</dd>
+    <dt>ECS</dt>
+    <dd>Elastic Container Service。コンテナを「どこに何個動かすか」を決めて動かし続ける係。置き場としてEC2やFargateを使う。</dd>
+    <dt>ELB</dt>
+    <dd>Elastic Load Balancing。入口を1つに保ったまま、裏の台へアクセスを振り分けるしくみ。各台が生きているかも見張っている。</dd>
+    <dt>RDS</dt>
+    <dd>Relational Database Service。MySQLやPostgreSQLなどを、入れかえ・バックアップ・故障時の切りかえごと任せられる形で使えるサービス。</dd>
+    <dt>VPC</dt>
+    <dd>AWSの中に用意する、自分専用のネットワーク区画。どのアドレスを外に出し、どれを内側に隠すかを決める土地の区割りにあたる。</dd>
+    <dt>S3</dt>
+    <dd>ファイルを置いておくための保管庫。画像やログ、バックアップなど「そのまま置いておきたいもの」の置き場として使う。</dd>
+    <dt>IAM</dt>
+    <dd>誰が何をしてよいかを決めるしくみ。人にもプログラムにも鍵を配り、要る操作だけを許すのが基本の使い方。</dd>
+    <dt>リージョン／アベイラビリティゾーン（AZ）</dt>
+    <dd>リージョンは東京・大阪といった地域のまとまり。その中にある独立した建物のかたまりがAZで、2か所以上に分けて置くのが基本。</dd>
+    <dt>マネージドサービス</dt>
+    <dd>入れかえ・監視・バックアップといった世話をAWS側が引き受けてくれる形のサービス。自由度と引きかえに、手間を減らせる。</dd>
+    <dt>オートスケーリング</dt>
+    <dd>混み具合に応じて、台数を自動で増やしたり減らしたりするしくみ。ピークに合わせて常時そろえておく必要がなくなる。</dd>
+  </dl>
+</section>
+
+<section class="sibling">
+  <h2>ほかの解説ページ</h2>
+  <ul>
+    <li><a href="mcp.html"><b>MCPのしくみ</b><span>AIは、外の道具を借りて動いている。</span></a></li>
+    <li><a href="cicd.html"><b>CI/CDのしくみ</b><span>直したものを、こわがらずに届けるために。</span></a></li>
+    <li><a href="websocket.html"><b>WebSocketのしくみ</b><span>「まだ？」と聞きに行かなくてよくなった日。</span></a></li>
+    <li><a href="flyway.html"><b>Flywayのしくみ</b><span>データベースだけ、やり直しがきかない。</span></a></li>
+    <li><a href="getdown.html"><b>Getdownのしくみ</b><span>配ったあとに、直せるようにする。</span></a></li>
+    <li><a href="angular.html"><b>Angularのしくみ</b><span>画面を、部品に切り分ける。</span></a></li>
+    <li><a href="bigip.html"><b>BIG-IPのしくみ</b><span>入口を1つにして、裏を何台にでも。</span></a></li>
+    <li><a href="spring.html"><b>Springのしくみ</b><span>部品の組み立てを、任せてしまう。</span></a></li>
+    <li><a href="docker.html"><b>Dockerのしくみ</b><span>「私のPCでは動く」を、なくすために。</span></a></li>
+    <li><a href="kubernetes.html"><b>Kubernetesのしくみ</b><span>落ちたら、勝手に起き上がる。</span></a></li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <p>AWS を、たとえ話・図解・クイズでたどるやさしい解説ページです。料金や設定の詳細は、公式ドキュメントをどうぞ。</p>
+  <p class="footmeta">最終更新日: 2026.9.7 ｜ 参考文献: <a href="https://docs.aws.amazon.com/ja_jp/" target="_blank" rel="noopener">AWS 公式ドキュメント（日本語）</a></p>
+  <p class="footver">AWSのしくみ　v1.0.0</p>
+</footer>
+
+</div>
+
+<script>
+"use strict";
+var APP_VERSION = "1.0.0";
+
+function initSwitch(){
+  var ec2 = document.getElementById("aw-ec2");
+  var ecs = document.getElementById("aw-ecs");
+  var eBtn = document.getElementById("btn-ec2");
+  var sBtn = document.getElementById("btn-ecs");
+  var tally = document.getElementById("tally");
+  if(!ec2 || !ecs) return;
+
+  function show(isEc2){
+    ec2.classList.toggle("hidden", !isEc2);
+    ecs.classList.toggle("hidden", isEc2);
+    eBtn.setAttribute("aria-pressed", isEc2 ? "true" : "false");
+    sBtn.setAttribute("aria-pressed", isEc2 ? "false" : "true");
+    tally.innerHTML = isEc2
+      ? 'OSの入れかえや更新　<b>自分</b>'
+      : 'OSの入れかえや更新　<b>任せる</b>';
+  }
+  eBtn.addEventListener("click", function(){ show(true); });
+  sBtn.addEventListener("click", function(){ show(false); });
+}
+
+function initCalc(){
+  var b = document.getElementById("base");
+  var p = document.getElementById("peak");
+  var res = document.getElementById("calc-result");
+  if(!b || !p) return;
+
+  [2,3,4,6,8,10].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v + "台";
+    if(v === 3) o.selected = true;
+    b.appendChild(o);
+  });
+  [4,6,8,12,20,30].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v + "台";
+    if(v === 12) o.selected = true;
+    p.appendChild(o);
+  });
+
+  function yen(n){ return n.toLocaleString("ja-JP"); }
+
+  function update(){
+    var unit = 10000;               // 1台あたりの月額（仮）
+    var peakRatio = 0.1;            // ピークが占める時間の割合（仮）
+    var base = parseInt(b.value, 10);
+    var peak = parseInt(p.value, 10);
+    var note = "";
+
+    if(peak < base){
+      peak = base;
+      note = "（ピークが平常時を下回っていたので、同じ台数として計算しました）";
+    }
+
+    var fixed = peak * unit;
+    var elastic = Math.round(base * unit + (peak - base) * unit * peakRatio);
+    var save = fixed - elastic;
+    var rate = fixed > 0 ? Math.round(save / fixed * 100) : 0;
+
+    var html = '<p class="rline">ピーク分をずっと持つと <strong>' + yen(fixed) +
+               '円</strong>／月、混む時間だけ増やすと <strong>' + yen(elastic) +
+               '円</strong>／月。差は <strong>' + yen(save) + '円</strong>（' + rate + '％）。' + note + '</p>';
+
+    html += '<div class="bars">';
+    html += '<div><p class="bar-label">ピーク分をずっと持つ　' + peak + '台ぶん</p>' +
+            '<div class="bar"><span style="width:100%"></span></div></div>';
+    html += '<div><p class="bar-label">混む時間だけ増やす　平常 ' + base + '台＋必要なとき ' + (peak - base) + '台</p>' +
+            '<div class="bar good"><span style="width:' + (fixed > 0 ? elastic / fixed * 100 : 0) + '%"></span></div></div>';
+    html += '</div>';
+
+    html += '<p class="rline" style="margin:0">' +
+            (peak === base
+              ? '波がないなら、借りても買っても金額はあまり変わりません。それでも「読みを外してもあとから直せる」という利点は残ります。'
+              : '差を生んでいるのは技術ではなく、返せることです。増やす操作を自動にしておくと（オートスケーリング）、人が夜中に張りつく必要もなくなります。') +
+            '<br><span class="pen">※ 単価も割合も説明のための仮の数字です。実際の料金は公式の料金表をご確認ください。</span></p>';
+    res.innerHTML = html;
+  }
+
+  b.addEventListener("change", update);
+  p.addEventListener("change", update);
+  update();
+}
+
+var FLOW = [
+  {y:"①", n:"名前を、住所に変える", t:"住所（IPアドレス）を直接書くと、<b>引っ越すたびに全員が書き直し</b>になる。", f:"ブラウザがドメイン名を引いて、いまの入口の住所を受け取る。裏側を入れかえても、名前は変わらない。"},
+  {y:"②", n:"ELBが受ける", t:"1台に直接つなぐと、<b>その1台が落ちた瞬間に全部止まる</b>。", f:"入口はELB1つ。生きている台の中から空いているものを選んで渡す。返事をしない台は自動で外される。"},
+  {y:"③", n:"EC2／ECSで処理する", t:"処理する台が1台きりだと、<b>混んだときに増やす手立てがない</b>。", f:"アプリが動いている台が、渡された1本を処理する。台は増やしても減らしてもよく、1台1台は使い捨てでかまわない。"},
+  {y:"④", n:"RDSに読み書きする", t:"データを台の中に持つと、<b>その台を捨てた瞬間に消える</b>。", f:"消えては困るものは、台の外にあるRDSへ。主の1台が倒れても副に切りかわり、バックアップも自動で取られている。"},
+  {y:"⑤", n:"返して、台は捨ててよくなる", t:"台に状態が残っていると、<b>特定の台が「特別な台」になってしまう</b>。", f:"結果を返したら、その台に残すものは何もない。だから壊れたら捨てて作り直せるし、混めば同じものを増やせる。"}
+];
+
+function buildFlow(){
+  var host = document.getElementById("tree-flow");
+  if(!host) return;
+  FLOW.forEach(function(s, i){
+    var wrap = document.createElement("div");
+    wrap.className = "step";
+    wrap.setAttribute("aria-expanded","false");
+    var btnId = "flow-btn-" + i, panId = "flow-pan-" + i;
+
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.id = btnId;
+    btn.setAttribute("aria-controls", panId);
+    btn.setAttribute("aria-expanded","false");
+    btn.innerHTML = '<span class="yr">' + s.y + '</span><span class="nm">' + s.n +
+                    '</span><span class="plus" aria-hidden="true"></span>';
+
+    var pan = document.createElement("div");
+    pan.className = "detail"; pan.id = panId; pan.hidden = true;
+    pan.setAttribute("role","region");
+    pan.setAttribute("aria-labelledby", btnId);
+    pan.innerHTML = '<p class="trouble">😖 これがないと：' + s.t + '</p>' +
+                    '<p class="fix">💡 やっていること：' + s.f + '</p>';
+
+    btn.addEventListener("click", function(){
+      var open = pan.hidden;
+      pan.hidden = !open;
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      wrap.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    wrap.appendChild(btn); wrap.appendChild(pan); host.appendChild(wrap);
+  });
+}
+
+var QUIZ = [
+  {
+    q:"EC2は、どういうもの？",
+    c:["データベースの専用サービス","必要なときに借りられる仮想サーバー","アクセスを振り分ける入口","ファイルの保管庫"],
+    a:1,
+    e:"EC2は借りるサーバーそのものです。OSから上は自分で面倒を見るぶん自由度が高く、逆に更新やミドルウェアの世話も自分の担当になります。"
+  },
+  {
+    q:"ELBの役割として、正しいのは？",
+    c:["アプリを書き換える","生きている台を選んで、アクセスを振り分ける","データを保存する","OSを更新する"],
+    a:1,
+    e:"入口を1つに保ったまま、裏の台へ振り分けます。各台が生きているかを見張っていて、返事のない台は自動で外れる——ここまでがELBの仕事です。"
+  },
+  {
+    q:"RDSを使うと、任せられるのはどれ？",
+    c:["アプリの設計","バックアップや故障時の切りかえ","画面の見た目","社内の承認"],
+    a:1,
+    e:"中身はMySQLやPostgreSQLのままで、変わるのは世話の担当です。入れかえ・バックアップ・切りかえを任せられる代わりに、機械の中を自由に触る余地は減ります。"
+  },
+  {
+    q:"消えては困るデータは、どこに置く？",
+    c:["EC2の中","RDSやS3など、台の外","ELBの中","メモリ"],
+    a:1,
+    e:"台は使い捨てが前提です。データを台の中に持つと、その台を捨てた瞬間に消えます。台の外に預けてあるからこそ、壊れたら捨てて作り直せます。"
+  },
+  {
+    q:"アプリの台もデータベースも1か所（1つのAZ）に置くと、何が困る？",
+    c:["料金が上がる","その1か所が落ちると全部止まる","通信が暗号化されない","台を増やせない"],
+    a:1,
+    e:"AZは独立した建物のかたまりです。1か所に集めると、そこが落ちたときの逃げ場がありません。最低でも2か所に分けるのが、クラウドでの基本形です。"
+  }
+];
+
+var qIndex = 0, qScore = 0;
+
+function renderQuiz(){
+  var host = document.getElementById("quiz-box");
+  if(!host) return;
+
+  if(qIndex >= QUIZ.length){
+    var msg = qScore === 5 ? "全問正解。もう人に説明できるレベル。"
+            : qScore >= 3 ? "いい線いってる。まちがえた問題ほど、覚えて帰れる。"
+            : "ここからが面白いところ。上の5ステップをもう一度ひらいてみよう。";
+    host.innerHTML = '<p class="score">結果：' + qScore + ' / ' + QUIZ.length + ' 問正解</p>' +
+                     '<p style="margin:0 0 14px">' + msg + '</p>' +
+                     '<button class="qnext" type="button" id="again">もう一度やる</button>';
+    document.getElementById("again").addEventListener("click", function(){
+      qIndex = 0; qScore = 0; renderQuiz();
+    });
+    return;
+  }
+
+  var item = QUIZ[qIndex];
+  var html = '<div class="qhead"><span class="qcount">第' + (qIndex+1) + '問 / ' + QUIZ.length + '問</span></div>' +
+             '<p class="qtext">' + item.q + '</p><div class="choices">';
+  item.c.forEach(function(text, i){
+    html += '<button class="choice" type="button" data-i="' + i + '">' + text + '</button>';
+  });
+  html += '</div><div class="answer" id="answer" hidden></div>';
+  host.innerHTML = html;
+
+  var buttons = host.querySelectorAll(".choice");
+  Array.prototype.forEach.call(buttons, function(b){
+    b.addEventListener("click", function(){
+      var picked = parseInt(b.dataset.i, 10);
+      var ok = picked === item.a;
+      if(ok) qScore++;
+
+      Array.prototype.forEach.call(buttons, function(x, i){
+        x.disabled = true;
+        if(i === item.a) x.classList.add("correct");
+        else if(i === picked) x.classList.add("wrong");
+      });
+
+      var ans = document.getElementById("answer");
+      ans.hidden = false;
+      ans.innerHTML = '<span class="verdict ' + (ok ? "ok" : "ng") + '">' +
+                      (ok ? "正解！" : "残念、正解は「" + item.c[item.a].replace(/<[^>]+>/g,"") + "」") + '</span>' +
+                      item.e +
+                      '<div><button class="qnext" type="button" id="next">' +
+                      (qIndex === QUIZ.length - 1 ? "結果を見る" : "次の問題へ") + '</button></div>';
+      document.getElementById("next").addEventListener("click", function(){
+        qIndex++; renderQuiz();
+      });
+      document.getElementById("next").focus();
+    });
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  document.getElementById("version").textContent = "v" + APP_VERSION;
+  initSwitch();
+  initCalc();
+  buildFlow();
+  renderQuiz();
+});
+</script>
+</body>
+</html>
