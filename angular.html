@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Angularのしくみ — 画面を、部品に切り分ける</title>
+<meta name="description" content="Angular（Webアプリのフレームワーク）を、たとえ話・図解・クイズでたどるやさしい解説ページ。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="topbar">
+  <span class="logo">Angularのしくみ</span>
+  <span class="ver" id="version">v1.0.0</span>
+  <a class="home" href="index.html">← 用語集トップ</a>
+</header>
+
+<main>
+
+<div class="hero" id="basic">
+  <h1>画面を、<br><span class="mark">部品</span>に切り分ける。</h1>
+  <p>ボタンの色を変えたい。でも、そのボタンは12画面にコピーされている。12か所を直して、1か所だけ直し忘れる——この繰り返しをやめるために生まれたのが、画面を部品の集まりとして組み立てる考え方。<strong>Angular</strong> は、その部品づくりに必要なものを最初から全部そろえて配っているフレームワークです。</p>
+
+  <div class="chain">
+    <p class="chain-title">「かごの中が3個になった」を画面に出すまで——</p>
+    <ol>
+      <li>
+        <span class="node now">データを変える<small>いま</small></span>
+        <span class="say">プログラムの中の数を 2 から 3 にしただけ</span>
+      </li>
+      <li class="arrowline">Angularが気づく</li>
+      <li>
+        <span class="node robot">変わった所を探す<small>自動</small></span>
+        <span class="say">その数を使っている部品はどれか、を突きとめる</span>
+      </li>
+      <li class="arrowline">関係する部品だけ</li>
+      <li>
+        <span class="node">描き直す<small>部分的に</small></span>
+        <span class="say">画面全体ではなく、必要な場所だけ書きかえる</span>
+      </li>
+      <li class="arrowline">結果として</li>
+      <li>
+        <span class="node goal">画面が追いつく<small>書かなくていい</small></span>
+        <span class="say">「HTMLのここを書きかえる」というコードは1行も書いていない</span>
+      </li>
+    </ol>
+  </div>
+  <p class="lead" style="margin-bottom:0">画面を直接いじるのをやめて、<span class="pen">データのほうを直す</span>。これが今日のいちばん大事なところ。</p>
+</div>
+
+<section id="why">
+  <h2>なんで、こんなものが必要になったの？</h2>
+  <p class="lead">答えはシンプル。<span class="mark pink">画面を手で書きかえるのが、限界だったから。</span></p>
+
+  <div class="notes">
+    <div class="note">
+      <h3>むかしは、場所を探して書きかえていた</h3>
+      <p>「合計金額の欄を更新する」ためには、まずその欄がHTMLのどこにあるかを探し、見つけて、文字を差し替える。この手順を、画面の変化の数だけ書いていました。</p>
+      <p class="eg">欄が増えるたびにコードが増える。しかも、探し方（HTMLの構造）を変えると、あちこちが同時に壊れます。</p>
+    </div>
+
+    <div class="note">
+      <h3>同じ見た目が、コピーで増えていく</h3>
+      <p>商品カード、確認ダイアログ、日付の入力欄。似たものが必要になるたびにコピーして貼る。気づけば同じHTMLが十数か所にあります。</p>
+      <p class="eg">直すときは全部まわる必要があります。1か所忘れると、そこだけ古い見た目のまま残ります。</p>
+    </div>
+
+    <div class="note">
+      <h3>だから、部品にして、データと結ぶ</h3>
+      <p>見た目（テンプレート）と、そのふるまい（クラス）をひとまとめにして「部品」にする。部品はいくつでも置ける。直すのは、部品の定義1か所だけ。</p>
+      <p class="eg">さらに、部品の中の値と画面の表示を結びつけておけば、値が変われば表示も変わります。書きかえる作業そのものが消えます。</p>
+    </div>
+  </div>
+</section>
+
+<section id="compare">
+  <h2>直すとき、何か所さわる？</h2>
+  <p class="lead">ボタンで切りかえて、修正の伝わり方を見てみよう。</p>
+
+  <div class="board">
+    <div class="switch">
+      <button type="button" id="btn-copy" aria-pressed="true">コピーで増やすと</button>
+      <button type="button" id="btn-comp" aria-pressed="false">部品にすると</button>
+    </div>
+    <p class="tally" id="tally">直す場所　<b>6</b> か所</p>
+    <figure style="margin:0">
+      <svg viewBox="0 0 600 240" role="img" aria-label="同じ見た目をコピーした場合は6か所を直す必要があり、部品にすると1か所の修正で全部に伝わることを示す図">
+        <g font-family="'Zen Maru Gothic',sans-serif">
+          <g id="ng-copy">
+            <text x="300" y="24" text-anchor="middle" font-size="15" font-weight="700" fill="#E4453A">同じHTMLが、6か所にコピーされている</text>
+            <g fill="#FDE6DC" stroke="#16263F" stroke-width="2">
+              <rect x="40" y="46" width="150" height="58" rx="10"/>
+              <rect x="225" y="46" width="150" height="58" rx="10"/>
+              <rect x="410" y="46" width="150" height="58" rx="10"/>
+              <rect x="40" y="130" width="150" height="58" rx="10"/>
+              <rect x="225" y="130" width="150" height="58" rx="10"/>
+              <rect x="410" y="130" width="150" height="58" rx="10"/>
+            </g>
+            <g font-size="13" fill="#16263F" font-family="'Zen Kaku Gothic New',sans-serif">
+              <text x="115" y="80" text-anchor="middle">商品カード</text>
+              <text x="300" y="80" text-anchor="middle">商品カード</text>
+              <text x="485" y="80" text-anchor="middle">商品カード</text>
+              <text x="115" y="164" text-anchor="middle">商品カード</text>
+              <text x="300" y="164" text-anchor="middle">商品カード</text>
+              <text x="485" y="164" text-anchor="middle">商品カード</text>
+            </g>
+            <g font-size="18" fill="#E4453A">
+              <text x="175" y="70" text-anchor="middle">✎</text>
+              <text x="360" y="70" text-anchor="middle">✎</text>
+              <text x="545" y="70" text-anchor="middle">✎</text>
+              <text x="175" y="154" text-anchor="middle">✎</text>
+              <text x="360" y="154" text-anchor="middle">✎</text>
+              <text x="545" y="154" text-anchor="middle">✎</text>
+            </g>
+            <text x="300" y="216" text-anchor="middle" font-size="13" fill="#54677E" font-family="'Zen Kaku Gothic New',sans-serif">1か所でも忘れると、そこだけ古い見た目のまま残る</text>
+          </g>
+
+          <g id="ng-comp" class="hidden">
+            <text x="300" y="24" text-anchor="middle" font-size="15" font-weight="700" fill="#1E8A4C">定義は1つ。置いてあるのは、その参照</text>
+            <rect x="215" y="38" width="170" height="46" rx="12" fill="#FFE066" stroke="#16263F" stroke-width="2"/>
+            <text x="300" y="60" text-anchor="middle" font-size="13" font-weight="700" fill="#16263F">商品カード部品</text>
+            <text x="300" y="76" text-anchor="middle" font-size="11" fill="#16263F" font-family="'Zen Kaku Gothic New',sans-serif">ここだけ直す</text>
+            <text x="398" y="62" font-size="18" fill="#E4453A">✎</text>
+            <g stroke="#25A167" stroke-width="2" fill="none">
+              <path d="M240 84 Q160 100 115 128"/>
+              <path d="M280 84 Q250 105 250 128"/>
+              <path d="M320 84 Q350 105 350 128"/>
+              <path d="M360 84 Q440 100 485 128"/>
+            </g>
+            <g fill="#DDF3E5" stroke="#16263F" stroke-width="2">
+              <rect x="45" y="130" width="140" height="52" rx="10"/>
+              <rect x="185" y="130" width="130" height="52" rx="10"/>
+              <rect x="290" y="130" width="130" height="52" rx="10"/>
+              <rect x="420" y="130" width="140" height="52" rx="10"/>
+            </g>
+            <g font-size="12.5" fill="#16263F" font-family="'Zen Kaku Gothic New',sans-serif">
+              <text x="115" y="160" text-anchor="middle">一覧画面</text>
+              <text x="250" y="160" text-anchor="middle">検索結果</text>
+              <text x="355" y="160" text-anchor="middle">お気に入り</text>
+              <text x="490" y="160" text-anchor="middle">カート</text>
+            </g>
+            <text x="300" y="216" text-anchor="middle" font-size="13" fill="#1E8A4C" font-weight="700" font-family="'Zen Kaku Gothic New',sans-serif">直し忘れが、そもそも起きない</text>
+          </g>
+        </g>
+      </svg>
+      <figcaption>部品化がしていることは「同じものを1つにまとめる」だけ。当たり前に見えますが、画面という壊れやすい場所でこれをやり切るために、フレームワークが必要になりました。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="calc">
+  <h2>コピーのまま進むと、どうなる？</h2>
+  <p class="lead">同じ部品を使う画面の数と、1年の変更回数を選んでみよう。</p>
+  <div class="calcbox">
+    <div class="calcrow">
+      <div>
+        <label for="screens">同じ部品を使う画面</label>
+        <select id="screens"></select>
+      </div>
+      <div>
+        <label for="edits">1年の変更回数</label>
+        <select id="edits"></select>
+      </div>
+    </div>
+    <div class="result" id="calc-result"></div>
+  </div>
+</section>
+
+<section id="parts">
+  <h2>登場人物は、5つだけ</h2>
+  <p class="lead">名前が多くて身構えますが、覚えるのはこれくらいです。<span class="pen">タップして開いてみよう。</span></p>
+
+  <div class="tree">
+    <h3>Angularを読むときに出てくるもの</h3>
+    <div class="step-list" id="tree-parts"></div>
+  </div>
+</section>
+
+<section id="around">
+  <h2>まわりの話も、少しだけ</h2>
+  <p class="lead">Angularを調べていると必ず出てくる言葉です。</p>
+  <div class="notes">
+    <div class="note">
+      <h3>TypeScriptが前提</h3>
+      <p>JavaScriptに「この変数には数値しか入らない」といった型の情報を足した言語で書きます。書く量は少し増えますが、まちがいを書いた時点で気づけます。</p>
+      <p class="eg">画面まわりは実際に動かすまで気づけない不具合が多い場所。だからこそ、先に止めてくれる仕組みが効きます。</p>
+    </div>
+    <div class="note">
+      <h3>SPA — ページを読み込み直さない</h3>
+      <p>最初に必要なものをまとめて読み込み、以降は画面の中身だけを差し替えます。画面遷移のたびに真っ白になる、あの待ち時間がなくなります。</p>
+      <p class="eg">そのぶん最初の読み込みは重くなります。業務システムのように「開いたら閉じずに使い続ける」用途と相性がよい方式です。</p>
+    </div>
+    <div class="note">
+      <h3>ReactやVueとの違い</h3>
+      <p>いちばんの特徴は<span class="mark cyan">最初から全部入り</span>であること。画面遷移も、通信も、フォームの検証も、公式のものが用意されています。</p>
+      <p class="eg">選択肢が少ないぶん、大人数で長く保守するときに書き方がそろいやすい。逆に、小さく軽く作りたいときは重く感じます。</p>
+    </div>
+  </div>
+</section>
+
+<section id="quiz">
+  <h2>クイズ：きみは何問わかる？</h2>
+  <p class="lead">全5問。まちがえても大丈夫、答えのほうが面白い。</p>
+  <div class="quiz" id="quiz"></div>
+</section>
+
+<section id="careful">
+  <h2>気をつけないと、あとで重くなる</h2>
+  <p class="lead">便利さの裏側で、見えにくいコストが積もります。</p>
+  <ol class="steps">
+    <li><b>部品を大きくしすぎない。</b>1つの部品が500行を超えたら、たいてい2つ以上の役目を持っています。切り分ける基準は「別の画面でも使えるか」。</li>
+    <li><b>後始末を忘れない。</b>継続的に流れてくるデータを受け取ったまま画面を閉じると、裏で動き続けます。画面が消えるときに止める処理を必ず書きます。</li>
+    <li><b>通信処理を画面に書かない。</b>サーバーとのやりとりは専用の係（サービス）に寄せます。画面の役目は「見せること」だけに保つと、テストも書けます。</li>
+    <li><b>型をごまかさない。</b>面倒だからと何でも入る型にすると、TypeScriptを使う意味がなくなります。急いでいるときほど効いてきます。</li>
+    <li><b>バージョンアップは定期的に。</b>年に何度か新しい版が出ます。溜めると一気に大変になるので、少しずつ上げるほうが結果的に楽です。</li>
+    <li><b>読み込むものの量を見る。</b>全部入りは便利ですが、その量がそのまま初回の待ち時間になります。使う画面のときだけ読み込む設定を検討します。</li>
+  </ol>
+</section>
+
+<section id="words">
+  <h2>ことばのミニ辞典</h2>
+  <p class="lead">この先どこかで見かけたときのために。</p>
+  <dl class="words">
+    <dt>コンポーネント</dt>
+    <dd>画面の部品。見た目のテンプレートと、そのふるまいを書いたクラスがセットになったもの。Angularの基本単位。</dd>
+    <dt>テンプレート</dt>
+    <dd>部品の見た目を書いたHTML。ふつうのHTMLに、値を差し込んだり、繰り返したりする書き方が足されている。</dd>
+    <dt>バインディング</dt>
+    <dd>プログラムの中の値と、画面の表示を結びつけること。値が変われば表示も変わる。</dd>
+    <dt>サービス</dt>
+    <dd>画面から追い出した処理をまとめる置き場。サーバーとの通信や、共有したいデータを持たせる。</dd>
+    <dt>DI（依存性の注入）</dt>
+    <dd>必要な部品を、自分で作らずに外から渡してもらう仕組み。差し替えられるので、テストが書きやすくなる。</dd>
+    <dt>ルーティング</dt>
+    <dd>URLと画面の対応づけ。「/orders を開いたら注文一覧の部品を表示する」といった決まりを書く。</dd>
+    <dt>SPA</dt>
+    <dd>Single Page Application。ページ全体を読み込み直さず、中身だけを差し替えて動くWebアプリの作り方。</dd>
+  </dl>
+</section>
+
+<section class="sibling">
+  <h2>ほかの解説ページ</h2>
+  <ul>
+    <li><a href="mcp.html"><b>MCPのしくみ</b><span>AIは、外の道具を借りて動いている。</span></a></li>
+    <li><a href="cicd.html"><b>CI/CDのしくみ</b><span>直したものを、こわがらずに届けるために。</span></a></li>
+    <li><a href="websocket.html"><b>WebSocketのしくみ</b><span>「まだ？」と聞きに行かなくてよくなった日。</span></a></li>
+    <li><a href="flyway.html"><b>Flywayのしくみ</b><span>データベースだけ、やり直しがきかない。</span></a></li>
+    <li><a href="getdown.html"><b>Getdownのしくみ</b><span>配ったあとに、直せるようにする。</span></a></li>
+    <li><a href="bigip.html"><b>BIG-IPのしくみ</b><span>入口を1つにして、裏を何台にでも。</span></a></li>
+    <li><a href="spring.html"><b>Springのしくみ</b><span>部品の組み立てを、任せてしまう。</span></a></li>
+    <li><a href="docker.html"><b>Dockerのしくみ</b><span>「私のPCでは動く」を、なくすために。</span></a></li>
+    <li><a href="kubernetes.html"><b>Kubernetesのしくみ</b><span>落ちたら、勝手に起き上がる。</span></a></li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <p>Angular を、たとえ話・図解・クイズでたどるやさしい解説ページです。書き方の詳細や最新の作法は、公式ドキュメントをどうぞ。</p>
+  <p class="footver">Angularのしくみ　v1.0.0</p>
+</footer>
+
+</div>
+
+<script>
+"use strict";
+var APP_VERSION = "1.0.0";
+
+function initSwitch(){
+  var copy = document.getElementById("ng-copy");
+  var comp = document.getElementById("ng-comp");
+  var cBtn = document.getElementById("btn-copy");
+  var pBtn = document.getElementById("btn-comp");
+  var tally = document.getElementById("tally");
+  if(!copy || !comp) return;
+
+  function show(isCopy){
+    copy.classList.toggle("hidden", !isCopy);
+    comp.classList.toggle("hidden", isCopy);
+    cBtn.setAttribute("aria-pressed", isCopy ? "true" : "false");
+    pBtn.setAttribute("aria-pressed", isCopy ? "false" : "true");
+    tally.innerHTML = isCopy ? '直す場所　<b>6</b> か所' : '直す場所　<b>1</b> か所';
+  }
+  cBtn.addEventListener("click", function(){ show(true); });
+  pBtn.addEventListener("click", function(){ show(false); });
+}
+
+function initCalc(){
+  var s = document.getElementById("screens");
+  var e = document.getElementById("edits");
+  var res = document.getElementById("calc-result");
+  if(!s || !e) return;
+
+  [3,5,8,12,20,30].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v + "画面";
+    if(v === 12) o.selected = true;
+    s.appendChild(o);
+  });
+  [4,8,12,24,50].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v + "回";
+    if(v === 12) o.selected = true;
+    e.appendChild(o);
+  });
+
+  function update(){
+    var screens = parseInt(s.value, 10);
+    var edits = parseInt(e.value, 10);
+    var copy = screens * edits;
+    var comp = edits;
+    var max = Math.max(copy, 1);
+    var missRisk = Math.round(copy * 0.05);
+
+    var html = '<p class="rline">コピー運用だと、1年で <strong>' + copy +
+               'か所</strong> を手で直すことになります。部品にしておけば <strong>' + comp +
+               'か所</strong>。修正の回数は同じでも、さわる場所の数がまるで違います。</p>';
+
+    html += '<div class="bars">';
+    html += '<div><p class="bar-label">コピー　' + screens + '画面 × ' + edits + '回</p>' +
+            '<div class="bar"><span style="width:100%"></span></div></div>';
+    html += '<div><p class="bar-label">部品　1か所 × ' + edits + '回</p>' +
+            '<div class="bar good"><span style="width:' + Math.max(comp / max * 100, 2) + '%"></span></div></div>';
+    html += '</div>';
+
+    html += '<p class="rline" style="margin:0">こわいのは作業量より、直し忘れです。仮に20回に1回見落とすとして、1年で <strong>' +
+            missRisk + '件</strong> の「そこだけ古い画面」が生まれます。バグ報告として返ってくるのは、たいてい数か月後です。</p>';
+    res.innerHTML = html;
+  }
+
+  s.addEventListener("change", update);
+  e.addEventListener("change", update);
+  update();
+}
+
+var PARTS = [
+  {y:"①", n:"コンポーネント", t:"見た目とふるまいが別々の場所にあると、<b>どこを直せばいいか分からない</b>。", f:"HTMLのテンプレートと、その画面のふるまいを書いたクラスを1組にする。これが画面の最小単位になる。"},
+  {y:"②", n:"バインディング", t:"「値が変わったからHTMLを書きかえる」コードを、<b>変化の数だけ書く</b>ことになる。", f:"値と表示を結びつけておく。値が変われば表示も変わり、ボタンが押されればクラスの処理が呼ばれる。"},
+  {y:"③", n:"入力と出力", t:"部品どうしが勝手に相手の中身をのぞくと、<b>どこから壊されたか追えなくなる</b>。", f:"親から子へは「入力」で値を渡し、子から親へは「出力」で知らせる。やりとりの道が1本に決まる。"},
+  {y:"④", n:"サービスとDI", t:"通信処理を画面に直接書くと、<b>同じ処理があちこちに散らばる</b>。", f:"処理をサービスに切り出し、必要な画面へ外から渡してもらう。差し替えられるので、テストのときは偽物を渡せる。"},
+  {y:"⑤", n:"ルーティング", t:"画面の切りかえを自前で書くと、<b>ブラウザの戻るボタンが効かなくなる</b>。", f:"URLと部品の対応を宣言しておく。URLが変われば表示が変わり、戻るボタンもブックマークも自然に動く。"}
+];
+
+function buildParts(){
+  var host = document.getElementById("tree-parts");
+  if(!host) return;
+  PARTS.forEach(function(s, i){
+    var wrap = document.createElement("div");
+    wrap.className = "step";
+    wrap.setAttribute("aria-expanded","false");
+    var btnId = "parts-btn-" + i, panId = "parts-pan-" + i;
+
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.id = btnId;
+    btn.setAttribute("aria-controls", panId);
+    btn.setAttribute("aria-expanded","false");
+    btn.innerHTML = '<span class="yr">' + s.y + '</span><span class="nm">' + s.n +
+                    '</span><span class="plus" aria-hidden="true"></span>';
+
+    var pan = document.createElement("div");
+    pan.className = "detail"; pan.id = panId; pan.hidden = true;
+    pan.setAttribute("role","region");
+    pan.setAttribute("aria-labelledby", btnId);
+    pan.innerHTML = '<p class="trouble">😖 これがないと：' + s.t + '</p>' +
+                    '<p class="fix">💡 やっていること：' + s.f + '</p>';
+
+    btn.addEventListener("click", function(){
+      var open = pan.hidden;
+      pan.hidden = !open;
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      wrap.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    wrap.appendChild(btn); wrap.appendChild(pan); host.appendChild(wrap);
+  });
+}
+
+var QUIZ = [
+  {
+    q:"Angularでの「コンポーネント」とは？",
+    c:["サーバーの名前","見た目とふるまいを1組にした画面の部品","データベースの表","通信の方式"],
+    a:1,
+    e:"テンプレート（HTML）とクラス（ふるまい）をセットにしたもの。これを組み合わせて画面を作ります。直すのは定義1か所だけですみます。"
+  },
+  {
+    q:"表示を変えたいとき、何をする？",
+    c:["HTMLの場所を探して書きかえる","もとになっている値を変える","画面を再読み込みする","CSSを書きかえる"],
+    a:1,
+    e:"値と表示が結びついているので、値を変えれば表示が追いつきます。「HTMLのここを書きかえる」というコードを書かなくてよくなったのが、大きな転換点でした。"
+  },
+  {
+    q:"DI（依存性の注入）でうれしいことは？",
+    c:["画面が速くなる","必要なものを差し替えられる","通信量が減る","CSSが短くなる"],
+    a:1,
+    e:"自分で作らず外から渡してもらう形にすると、テストのときだけ偽物に差し替える、といったことができます。結合を弱くする、という言い方もします。"
+  },
+  {
+    q:"SPAの説明として正しいのは？",
+    c:["1枚しか画面がない","ページを読み込み直さず、中身だけ差し替える","スマホ専用","印刷用の形式"],
+    a:1,
+    e:"Single Page Application。画面遷移のたびに真っ白になる待ち時間がなくなります。そのかわり、最初の読み込みは重くなります。"
+  },
+  {
+    q:"ReactやVueと比べたときのAngularの特徴は？",
+    c:["最初から全部入り","画面が作れない","JavaScriptを使わない","無料ではない"],
+    a:0,
+    e:"画面遷移も通信もフォーム検証も、公式のものが用意されています。選択肢が少ないぶん書き方がそろいやすく、大人数・長期の保守と相性がよい設計です。"
+  }
+];
+
+var qIndex = 0, qScore = 0;
+
+function renderQuiz(){
+  var host = document.getElementById("quiz");
+  if(!host) return;
+
+  if(qIndex >= QUIZ.length){
+    var msg = qScore === 5 ? "全問正解。もう人に説明できるレベル。"
+            : qScore >= 3 ? "いい線いってる。まちがえた問題ほど、覚えて帰れる。"
+            : "ここからが面白いところ。上の登場人物をもう一度ひらいてみよう。";
+    host.innerHTML = '<p class="score">結果：' + qScore + ' / ' + QUIZ.length + ' 問正解</p>' +
+                     '<p style="margin:0 0 14px">' + msg + '</p>' +
+                     '<button class="qnext" type="button" id="again">もう一度やる</button>';
+    document.getElementById("again").addEventListener("click", function(){
+      qIndex = 0; qScore = 0; renderQuiz();
+    });
+    return;
+  }
+
+  var item = QUIZ[qIndex];
+  var html = '<div class="qhead"><span class="qcount">第' + (qIndex+1) + '問 / ' + QUIZ.length + '問</span></div>' +
+             '<p class="qtext">' + item.q + '</p><div class="choices">';
+  item.c.forEach(function(text, i){
+    html += '<button class="choice" type="button" data-i="' + i + '">' + text + '</button>';
+  });
+  html += '</div><div class="answer" id="answer" hidden></div>';
+  host.innerHTML = html;
+
+  var buttons = host.querySelectorAll(".choice");
+  Array.prototype.forEach.call(buttons, function(b){
+    b.addEventListener("click", function(){
+      var picked = parseInt(b.dataset.i, 10);
+      var ok = picked === item.a;
+      if(ok) qScore++;
+
+      Array.prototype.forEach.call(buttons, function(x, i){
+        x.disabled = true;
+        if(i === item.a) x.classList.add("correct");
+        else if(i === picked) x.classList.add("wrong");
+      });
+
+      var ans = document.getElementById("answer");
+      ans.hidden = false;
+      ans.innerHTML = '<span class="verdict ' + (ok ? "ok" : "ng") + '">' +
+                      (ok ? "正解！" : "残念、正解は「" + item.c[item.a] + "」") + '</span>' +
+                      item.e +
+                      '<div><button class="qnext" type="button" id="next">' +
+                      (qIndex === QUIZ.length - 1 ? "結果を見る" : "次の問題へ") + '</button></div>';
+      document.getElementById("next").addEventListener("click", function(){
+        qIndex++; renderQuiz();
+      });
+      document.getElementById("next").focus();
+    });
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  document.getElementById("version").textContent = "v" + APP_VERSION;
+  initSwitch();
+  initCalc();
+  buildParts();
+  renderQuiz();
+});
+</script>
+</body>
+</html>

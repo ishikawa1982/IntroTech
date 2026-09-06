@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kubernetesのしくみ — 落ちたら、勝手に起き上がる</title>
+<meta name="description" content="Kubernetes（コンテナオーケストレーション）を、たとえ話・図解・クイズでたどるやさしい解説ページ。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="topbar">
+  <span class="logo">Kubernetesのしくみ</span>
+  <span class="ver" id="version">v1.0.0</span>
+  <a class="home" href="index.html">← 用語集トップ</a>
+</header>
+
+<main>
+
+<div class="hero" id="basic">
+  <h1>落ちたら、<br><span class="mark">勝手に起き上がる</span>。</h1>
+  <p>コンテナが3個のうちは、人が見ていられる。50個になったら無理です。どのサーバーで何個動かすか、落ちたら誰が気づくか、増やしたいときはどうするか。<strong>Kubernetes</strong>（クバネティス、k8s）は、そこを引き受ける番人。特徴は「手順」ではなく「<span class="mark cyan">こうあってほしい姿</span>」を書くところにあります。</p>
+
+  <div class="chain">
+    <p class="chain-title">「3個動かしておいて」と伝えてからの、ずっと続く仕事——</p>
+    <ol>
+      <li>
+        <span class="node now">あるべき姿を書く<small>いま</small></span>
+        <span class="say">「このアプリを、常に3個」とファイルに宣言する</span>
+      </li>
+      <li class="arrowline">受け取って、記録する</li>
+      <li>
+        <span class="node">現状とくらべる<small>ずっと</small></span>
+        <span class="say">今いくつ動いている？ 足りない？ 多い？</span>
+      </li>
+      <li class="arrowline">差があれば</li>
+      <li>
+        <span class="node robot">近づける<small>自動</small></span>
+        <span class="say">足りなければ起動し、多ければ止める</span>
+      </li>
+      <li class="arrowline">1個落ちても</li>
+      <li>
+        <span class="node goal">また3個に戻る<small>人は寝ていていい</small></span>
+        <span class="say">誰も起こされないまま、朝には元どおりになっている</span>
+      </li>
+    </ol>
+  </div>
+  <p class="lead" style="margin-bottom:0">命令ではなく、<span class="pen">ゴールを預ける</span>。これが今日のいちばん大事なところ。</p>
+</div>
+
+<section id="why">
+  <h2>なんで、こんな大がかりなものが要るの？</h2>
+  <p class="lead">答えはシンプル。<span class="mark pink">数が増えると、人の手が追いつかないから。</span></p>
+
+  <div class="notes">
+    <div class="note">
+      <h3>夜中に落ちて、人が起きていた</h3>
+      <p>監視から通知が飛び、担当者が起きて、パソコンを開いて、サーバーに入って、再起動する。復旧まで15分。その15分、利用者は使えません。</p>
+      <p class="eg">やっていることは毎回同じ「止まっていたから、また起動した」。人がやる必要のない仕事の代表格でした。</p>
+    </div>
+
+    <div class="note">
+      <h3>どこに置くかを、人が決めていた</h3>
+      <p>サーバーが5台、動かすものが30個。どれをどの台に置けば偏らないか。1台増やしたとき、どれを移すか。手作業の配置決めは、すぐに破綻します。</p>
+      <p class="eg">しかも間違えると、1台だけ過負荷になって落ち、その連鎖が始まります。</p>
+    </div>
+
+    <div class="note">
+      <h3>だから、あるべき姿だけを預ける</h3>
+      <p>「Aサーバーで起動しろ」ではなく「常に3個動いている状態にして」と書く。あとは、その状態を保ち続けるのが番人の仕事になります。</p>
+      <p class="eg">置き場所を選ぶのも、落ちたものを作り直すのも、増やすのも減らすのも、同じ1つの考え方でつながります。</p>
+    </div>
+  </div>
+</section>
+
+<section id="compare">
+  <h2>1個落ちたとき、何が起きる？</h2>
+  <p class="lead">ボタンで切りかえて、復旧までの流れをくらべてみよう。</p>
+
+  <div class="board">
+    <div class="switch">
+      <button type="button" id="btn-man" aria-pressed="true">人が対応する</button>
+      <button type="button" id="btn-k8s" aria-pressed="false">Kubernetesが直す</button>
+    </div>
+    <p class="tally" id="tally">復旧までの時間　<b>15分</b></p>
+    <figure style="margin:0">
+      <svg viewBox="0 0 600 240" role="img" aria-label="人が対応する場合と、Kubernetesが自動で復旧する場合の流れを比べた図">
+        <defs>
+          <marker id="ka" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+        <g font-family="'Zen Maru Gothic',sans-serif">
+          <g id="k-man">
+            <text x="300" y="26" text-anchor="middle" font-size="15" font-weight="700" fill="#E4453A">深夜2時、通知が鳴る</text>
+            <g font-size="12.5" font-family="'Zen Kaku Gothic New',sans-serif">
+              <rect x="20" y="52" width="104" height="56" rx="10" fill="#FFD9D6" stroke="#E4453A" stroke-width="2"/>
+              <text x="72" y="78" text-anchor="middle" fill="#16263F">停止</text>
+              <text x="72" y="96" text-anchor="middle" fill="#E4453A">✕</text>
+              <rect x="152" y="52" width="104" height="56" rx="10" fill="#fff" stroke="#16263F" stroke-width="2"/>
+              <text x="204" y="78" text-anchor="middle" fill="#16263F">通知が飛ぶ</text>
+              <text x="204" y="96" text-anchor="middle" fill="#54677E">2分</text>
+              <rect x="284" y="52" width="104" height="56" rx="10" fill="#fff" stroke="#16263F" stroke-width="2"/>
+              <text x="336" y="78" text-anchor="middle" fill="#16263F">人が起きる</text>
+              <text x="336" y="96" text-anchor="middle" fill="#54677E">8分</text>
+              <rect x="416" y="52" width="104" height="56" rx="10" fill="#fff" stroke="#16263F" stroke-width="2"/>
+              <text x="468" y="78" text-anchor="middle" fill="#16263F">手で再起動</text>
+              <text x="468" y="96" text-anchor="middle" fill="#54677E">5分</text>
+            </g>
+            <g stroke="#54677E" stroke-width="2" marker-end="url(#ka)">
+              <line x1="124" y1="80" x2="148" y2="80"/>
+              <line x1="256" y1="80" x2="280" y2="80"/>
+              <line x1="388" y1="80" x2="412" y2="80"/>
+            </g>
+            <rect x="20" y="140" width="500" height="34" rx="8" fill="#FFD9D6" stroke="#E4453A" stroke-width="2"/>
+            <text x="270" y="162" text-anchor="middle" font-size="13" font-weight="700" fill="#16263F">この15分、利用者は使えない</text>
+            <text x="300" y="204" text-anchor="middle" font-size="13" fill="#54677E" font-family="'Zen Kaku Gothic New',sans-serif">やっていることは毎回同じ「止まっていたので、また起動した」</text>
+          </g>
+
+          <g id="k-auto" class="hidden">
+            <text x="300" y="26" text-anchor="middle" font-size="15" font-weight="700" fill="#1E8A4C">深夜2時、誰も気づかない</text>
+            <g font-size="12.5" font-family="'Zen Kaku Gothic New',sans-serif">
+              <rect x="60" y="52" width="130" height="56" rx="10" fill="#FFD9D6" stroke="#E4453A" stroke-width="2"/>
+              <text x="125" y="78" text-anchor="middle" fill="#16263F">1個 停止</text>
+              <text x="125" y="96" text-anchor="middle" fill="#E4453A">✕</text>
+              <rect x="235" y="52" width="130" height="56" rx="10" fill="#D3C4F2" stroke="#16263F" stroke-width="2"/>
+              <text x="300" y="74" text-anchor="middle" fill="#16263F">3個のはずが2個</text>
+              <text x="300" y="94" text-anchor="middle" fill="#16263F">→ 差に気づく</text>
+              <rect x="410" y="52" width="130" height="56" rx="10" fill="#DDF3E5" stroke="#16263F" stroke-width="2"/>
+              <text x="475" y="74" text-anchor="middle" fill="#16263F">新しく1個起動</text>
+              <text x="475" y="94" text-anchor="middle" fill="#1E8A4C">10秒</text>
+            </g>
+            <g stroke="#25A167" stroke-width="2" marker-end="url(#ka)">
+              <line x1="190" y1="80" x2="231" y2="80"/>
+              <line x1="365" y1="80" x2="406" y2="80"/>
+            </g>
+            <rect x="60" y="140" width="480" height="34" rx="8" fill="#DDF3E5" stroke="#16263F" stroke-width="2"/>
+            <text x="300" y="162" text-anchor="middle" font-size="13" font-weight="700" fill="#16263F">残りの2個が受けているので、止まらない</text>
+            <text x="300" y="204" text-anchor="middle" font-size="13" fill="#1E8A4C" font-weight="700" font-family="'Zen Kaku Gothic New',sans-serif">翌朝、記録を見て初めて「落ちてたんだ」と知る</text>
+          </g>
+        </g>
+      </svg>
+      <figcaption>Kubernetesは「壊れないようにする」道具ではありません。<strong>壊れる前提で、勝手に直し続ける</strong>道具です。ここが発想の転換点になります。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="calc">
+  <h2>年に何回、起こされる？</h2>
+  <p class="lead">動かしている数と、1つあたりの停止の起きやすさを選んでみよう。</p>
+  <div class="calcbox">
+    <div class="calcrow">
+      <div>
+        <label for="pods">動かしている数</label>
+        <select id="pods"></select>
+      </div>
+      <div>
+        <label for="rate">1つあたり年に</label>
+        <select id="rate"></select>
+      </div>
+    </div>
+    <div class="result" id="calc-result"></div>
+  </div>
+</section>
+
+<section id="flow">
+  <h2>番人が、ずっとやっていること</h2>
+  <p class="lead">宣言を受け取ってからの5つの仕事。<span class="pen">タップして開いてみよう。</span></p>
+
+  <div class="tree">
+    <h3>あるべき姿を、保ち続ける</h3>
+    <div class="step-list" id="tree-flow"></div>
+  </div>
+</section>
+
+<section id="parts">
+  <h2>最初に覚える3つの名前</h2>
+  <p class="lead">用語が多い世界ですが、入口はここだけで足ります。</p>
+  <div class="notes">
+    <div class="note">
+      <h3>Pod — 動かす最小の単位</h3>
+      <p>コンテナを1つ（ときに数個）まとめた、いちばん小さなかたまり。Kubernetesが起動したり止めたりするのは、コンテナではなくPodです。</p>
+      <p class="eg">Podは使い捨てです。落ちたら直すのではなく、新しいものを作って置きかえます。名前もアドレスも毎回変わります。</p>
+    </div>
+    <div class="note">
+      <h3>Deployment — 何個ほしいかを書く</h3>
+      <p>「このPodを常に3個」と宣言する係。実際に数を数えて、足りなければ作り、多ければ消すのはこの人の仕事です。</p>
+      <p class="eg">新しい版に入れ替えるときも、少しずつ置きかえてくれます。全部いっぺんに止まらないので、利用者から見れば無停止になります。</p>
+    </div>
+    <div class="note">
+      <h3>Service — 変わらない入口</h3>
+      <p>Podは作り直すたびにアドレスが変わります。それでは呼べないので、変わらない名前の入口を用意して、そこから生きているPodへ振り分けます。</p>
+      <p class="eg">やっていることは<a href="bigip.html">ロードバランサ</a>と同じです。中身が入れ替わり続ける前提になっているところが違います。</p>
+    </div>
+  </div>
+</section>
+
+<section id="quiz">
+  <h2>クイズ：きみは何問わかる？</h2>
+  <p class="lead">全5問。まちがえても大丈夫、答えのほうが面白い。</p>
+  <div class="quiz" id="quiz"></div>
+</section>
+
+<section id="careful">
+  <h2>入れる前に、考えること</h2>
+  <p class="lead">強力ですが、タダではありません。ここは正直に書いておきます。</p>
+  <ol class="steps">
+    <li><b>小さな構成には、重すぎる。</b>サーバー2台でアプリ1つを動かすなら、まず必要ありません。覚えることと運用の手間が、得られるものを上回ります。</li>
+    <li><b>使う量を、必ず宣言する。</b>1つのPodがどれだけメモリを使うかを書かないと、1個の暴走が同じサーバーの全員を巻き添えにします。</li>
+    <li><b>「生きている」の定義を書く。</b>プロセスがあるかどうかだけでは、固まった状態を検知できません。ちゃんと応答が返るかを確認する設定を入れます。</li>
+    <li><b>状態を持つものは、難しい。</b>データベースのように「消えては困るもの」を載せるのは、Webアプリを載せるより何段も難易度が上がります。最初は避けるのが無難です。</li>
+    <li><b>設定ファイルが増え続ける。</b>宣言の数だけファイルが増えます。管理の方法を決めないまま始めると、どれが本物か分からなくなります。</li>
+    <li><b>止まらない ≠ 壊れていない。</b>勝手に直り続けるので、不具合に気づかないまま何か月も動くことがあります。再起動の回数そのものを見張る必要があります。</li>
+  </ol>
+</section>
+
+<section id="words">
+  <h2>ことばのミニ辞典</h2>
+  <p class="lead">この先どこかで見かけたときのために。</p>
+  <dl class="words">
+    <dt>コンテナオーケストレーション</dt>
+    <dd>たくさんのコンテナを、どこで何個動かすか自動で管理すること。Kubernetesはその代表格。</dd>
+    <dt>Pod</dt>
+    <dd>Kubernetesが扱う最小の単位。コンテナを1つ以上まとめたもので、使い捨てが前提。</dd>
+    <dt>Deployment</dt>
+    <dd>「このPodを常に何個」を宣言する係。数を保ち、新しい版への入れ替えも少しずつ進めてくれる。</dd>
+    <dt>Service</dt>
+    <dd>入れ替わり続けるPodの前に置く、変わらない入口。生きているPodへ振り分ける。</dd>
+    <dt>マニフェスト</dt>
+    <dd>あるべき姿を書いたファイル。手順ではなく結果を書くので「宣言的」と呼ばれる。</dd>
+    <dt>ノード／クラスタ</dt>
+    <dd>Podが実際に動くサーバー1台が「ノード」、それらをまとめた全体が「クラスタ」。</dd>
+    <dt>スケジューラ</dt>
+    <dd>新しいPodをどのノードに置くか決める係。空き具合や条件を見て、置き場所を選ぶ。</dd>
+  </dl>
+</section>
+
+<section class="sibling">
+  <h2>ほかの解説ページ</h2>
+  <ul>
+    <li><a href="mcp.html"><b>MCPのしくみ</b><span>AIは、外の道具を借りて動いている。</span></a></li>
+    <li><a href="cicd.html"><b>CI/CDのしくみ</b><span>直したものを、こわがらずに届けるために。</span></a></li>
+    <li><a href="websocket.html"><b>WebSocketのしくみ</b><span>「まだ？」と聞きに行かなくてよくなった日。</span></a></li>
+    <li><a href="flyway.html"><b>Flywayのしくみ</b><span>データベースだけ、やり直しがきかない。</span></a></li>
+    <li><a href="getdown.html"><b>Getdownのしくみ</b><span>配ったあとに、直せるようにする。</span></a></li>
+    <li><a href="angular.html"><b>Angularのしくみ</b><span>画面を、部品に切り分ける。</span></a></li>
+    <li><a href="bigip.html"><b>BIG-IPのしくみ</b><span>入口を1つにして、裏を何台にでも。</span></a></li>
+    <li><a href="spring.html"><b>Springのしくみ</b><span>部品の組み立てを、任せてしまう。</span></a></li>
+    <li><a href="docker.html"><b>Dockerのしくみ</b><span>「私のPCでは動く」を、なくすために。</span></a></li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <p>Kubernetes を、たとえ話・図解・クイズでたどるやさしい解説ページです。設定の書き方や運用の詳細は、公式ドキュメントをどうぞ。</p>
+  <p class="footver">Kubernetesのしくみ　v1.0.0</p>
+</footer>
+
+</div>
+
+<script>
+"use strict";
+var APP_VERSION = "1.0.0";
+
+function initSwitch(){
+  var man = document.getElementById("k-man");
+  var auto = document.getElementById("k-auto");
+  var mBtn = document.getElementById("btn-man");
+  var kBtn = document.getElementById("btn-k8s");
+  var tally = document.getElementById("tally");
+  if(!man || !auto) return;
+
+  function show(isMan){
+    man.classList.toggle("hidden", !isMan);
+    auto.classList.toggle("hidden", isMan);
+    mBtn.setAttribute("aria-pressed", isMan ? "true" : "false");
+    kBtn.setAttribute("aria-pressed", isMan ? "false" : "true");
+    tally.innerHTML = isMan ? '復旧までの時間　<b>15分</b>' : '復旧までの時間　<b>10秒</b>';
+  }
+  mBtn.addEventListener("click", function(){ show(true); });
+  kBtn.addEventListener("click", function(){ show(false); });
+}
+
+function initCalc(){
+  var p = document.getElementById("pods");
+  var r = document.getElementById("rate");
+  var res = document.getElementById("calc-result");
+  if(!p || !r) return;
+
+  [5,10,30,50,100,300].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v + "個";
+    if(v === 30) o.selected = true;
+    p.appendChild(o);
+  });
+  [1,2,4,6,12].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v + "回 停止";
+    if(v === 2) o.selected = true;
+    r.appendChild(o);
+  });
+
+  function update(){
+    var pods = parseInt(p.value, 10);
+    var rate = parseInt(r.value, 10);
+    var events = pods * rate;
+    var manualMin = events * 15;
+    var autoMin = Math.round(events * 10 / 60);
+    var night = Math.round(events / 3);
+    var max = Math.max(manualMin, 1);
+
+    function hm(x){
+      var h = Math.floor(x / 60), m = x % 60;
+      return (h > 0 ? h + "時間" : "") + (m > 0 || h === 0 ? m + "分" : "");
+    }
+
+    var html = '<p class="rline">年間の停止は <strong>' + events.toLocaleString() +
+               '回</strong>。人が15分で復旧するとして <strong>' + hm(manualMin) +
+               '</strong>、自動なら合計 <strong>' + hm(autoMin) + '</strong> ほどです。</p>';
+
+    html += '<div class="bars">';
+    html += '<div><p class="bar-label">人が対応　' + events.toLocaleString() + '回 × 15分</p>' +
+            '<div class="bar"><span style="width:100%"></span></div></div>';
+    html += '<div><p class="bar-label">自動で復旧　1回あたり10秒</p>' +
+            '<div class="bar good"><span style="width:' + Math.max(autoMin / max * 100, 2) + '%"></span></div></div>';
+    html += '</div>';
+
+    html += '<p class="rline" style="margin:0">効いてくるのは時間より、その中身です。夜間や休日にかかるのがざっと <strong>' +
+            night.toLocaleString() + '回</strong>。' +
+            (events >= 100
+              ? 'この規模で人が受けるのは、続きません。'
+              : 'この回数なら人でも回せますが、担当者が1人に固定されがちなのが問題になります。') +
+            '</p>';
+    res.innerHTML = html;
+  }
+
+  p.addEventListener("change", update);
+  r.addEventListener("change", update);
+  update();
+}
+
+var FLOW = [
+  {y:"①", n:"あるべき姿を受け取る", t:"「Aサーバーで起動しろ」と手順で伝えると、<b>状況が変わるたびに命令し直す</b>ことになる。", f:"「このアプリを常に3個」という結果だけを受け取り、記録する。以降、その記録が唯一の正解になる。"},
+  {y:"②", n:"置き場所を決める", t:"人が配置を決めると、<b>1台だけ過負荷になって落ちる</b>。しかも気づきにくい。", f:"各サーバーの空き具合や条件を見て、どこで動かすかを自動で選ぶ。台を増やせば、そこも候補に入る。"},
+  {y:"③", n:"起動する", t:"起動の手順が人によって違うと、<b>同じはずのものが同じにならない</b>。", f:"選ばれたサーバー上で、指定されたイメージからコンテナを立ち上げる。手順はいつも同じ。"},
+  {y:"④", n:"見張って、直し続ける", t:"落ちたことに気づくのが<b>利用者からの電話</b>、という状態になる。", f:"数と状態を見比べ続ける。足りなければ作り、応答しないものは作り直す。これが止まらない理由の本体。"},
+  {y:"⑤", n:"入口を用意する", t:"Podは作り直すたびにアドレスが変わるので、<b>呼ぶ側が追いつけない</b>。", f:"変わらない名前の入口を作り、そのときに生きているPodへ振り分ける。呼ぶ側は中身の入れ替わりを知らずに済む。"}
+];
+
+function buildFlow(){
+  var host = document.getElementById("tree-flow");
+  if(!host) return;
+  FLOW.forEach(function(s, i){
+    var wrap = document.createElement("div");
+    wrap.className = "step";
+    wrap.setAttribute("aria-expanded","false");
+    var btnId = "flow-btn-" + i, panId = "flow-pan-" + i;
+
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.id = btnId;
+    btn.setAttribute("aria-controls", panId);
+    btn.setAttribute("aria-expanded","false");
+    btn.innerHTML = '<span class="yr">' + s.y + '</span><span class="nm">' + s.n +
+                    '</span><span class="plus" aria-hidden="true"></span>';
+
+    var pan = document.createElement("div");
+    pan.className = "detail"; pan.id = panId; pan.hidden = true;
+    pan.setAttribute("role","region");
+    pan.setAttribute("aria-labelledby", btnId);
+    pan.innerHTML = '<p class="trouble">😖 これがないと：' + s.t + '</p>' +
+                    '<p class="fix">💡 やっていること：' + s.f + '</p>';
+
+    btn.addEventListener("click", function(){
+      var open = pan.hidden;
+      pan.hidden = !open;
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      wrap.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    wrap.appendChild(btn); wrap.appendChild(pan); host.appendChild(wrap);
+  });
+}
+
+var QUIZ = [
+  {
+    q:"Kubernetesに伝えるのは、次のうちどれ？",
+    c:["起動する手順","こうあってほしい状態","エラーの直し方","サーバーの型番"],
+    a:1,
+    e:"「常に3個動いている状態にして」と結果だけを書きます。そこへ近づけ続けるのが仕事です。手順ではなくゴールを預けるので「宣言的」と呼ばれます。"
+  },
+  {
+    q:"Kubernetesが起動したり止めたりする最小の単位は？",
+    c:["Pod","サーバー","イメージ","ファイル"],
+    a:0,
+    e:"コンテナを1つ以上まとめたPodが単位です。使い捨てが前提で、落ちたら直すのではなく、新しいものを作って置きかえます。"
+  },
+  {
+    q:"Podのアドレスが毎回変わるのに、なぜ呼び出せる？",
+    c:["利用者が調べるから","Serviceという変わらない入口があるから","アドレスは変わらないから","毎回設定し直すから"],
+    a:1,
+    e:"Serviceが変わらない名前の入口になり、そのとき生きているPodへ振り分けます。中身が入れ替わり続ける前提で作られたロードバランサ、という理解でほぼ合っています。"
+  },
+  {
+    q:"「使うメモリの量」を宣言しないと、何が起きる？",
+    c:["起動が速くなる","1つの暴走が、同じサーバーの全員を巻き添えにする","何も起きない","通信できない"],
+    a:1,
+    e:"上限がないと、1つが食べ尽くします。置き場所を決める判断材料にもなるので、量の宣言は最初に覚えるべき設定のひとつです。"
+  },
+  {
+    q:"導入をいったん見送るべきなのは、どんなとき？",
+    c:["サーバー2台でアプリ1つを動かしている","数十個のコンテナを運用している","夜間障害が頻発している","台数を頻繁に増減させたい"],
+    a:0,
+    e:"小さな構成では、覚えることと運用の手間のほうが大きくなります。強力な道具ほど、要らない場面でははっきり重い。ここは正直に見極めるところです。"
+  }
+];
+
+var qIndex = 0, qScore = 0;
+
+function renderQuiz(){
+  var host = document.getElementById("quiz");
+  if(!host) return;
+
+  if(qIndex >= QUIZ.length){
+    var msg = qScore === 5 ? "全問正解。もう人に説明できるレベル。"
+            : qScore >= 3 ? "いい線いってる。まちがえた問題ほど、覚えて帰れる。"
+            : "ここからが面白いところ。上の5ステップをもう一度ひらいてみよう。";
+    host.innerHTML = '<p class="score">結果：' + qScore + ' / ' + QUIZ.length + ' 問正解</p>' +
+                     '<p style="margin:0 0 14px">' + msg + '</p>' +
+                     '<button class="qnext" type="button" id="again">もう一度やる</button>';
+    document.getElementById("again").addEventListener("click", function(){
+      qIndex = 0; qScore = 0; renderQuiz();
+    });
+    return;
+  }
+
+  var item = QUIZ[qIndex];
+  var html = '<div class="qhead"><span class="qcount">第' + (qIndex+1) + '問 / ' + QUIZ.length + '問</span></div>' +
+             '<p class="qtext">' + item.q + '</p><div class="choices">';
+  item.c.forEach(function(text, i){
+    html += '<button class="choice" type="button" data-i="' + i + '">' + text + '</button>';
+  });
+  html += '</div><div class="answer" id="answer" hidden></div>';
+  host.innerHTML = html;
+
+  var buttons = host.querySelectorAll(".choice");
+  Array.prototype.forEach.call(buttons, function(b){
+    b.addEventListener("click", function(){
+      var picked = parseInt(b.dataset.i, 10);
+      var ok = picked === item.a;
+      if(ok) qScore++;
+
+      Array.prototype.forEach.call(buttons, function(x, i){
+        x.disabled = true;
+        if(i === item.a) x.classList.add("correct");
+        else if(i === picked) x.classList.add("wrong");
+      });
+
+      var ans = document.getElementById("answer");
+      ans.hidden = false;
+      ans.innerHTML = '<span class="verdict ' + (ok ? "ok" : "ng") + '">' +
+                      (ok ? "正解！" : "残念、正解は「" + item.c[item.a] + "」") + '</span>' +
+                      item.e +
+                      '<div><button class="qnext" type="button" id="next">' +
+                      (qIndex === QUIZ.length - 1 ? "結果を見る" : "次の問題へ") + '</button></div>';
+      document.getElementById("next").addEventListener("click", function(){
+        qIndex++; renderQuiz();
+      });
+      document.getElementById("next").focus();
+    });
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  document.getElementById("version").textContent = "v" + APP_VERSION;
+  initSwitch();
+  initCalc();
+  buildFlow();
+  renderQuiz();
+});
+</script>
+</body>
+</html>

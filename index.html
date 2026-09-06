@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>やさしい技術解説 — 用語集</title>
+<meta name="description" content="MCP・CI/CD・WebSocket を、たとえ話と図解とクイズでたどる解説シリーズ。各ページの用語をまとめた索引つき。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="topbar">
+  <span class="logo">やさしい技術解説</span>
+  <span class="ver" id="version">v1.3.0</span>
+  <span class="from">用語集トップ</span>
+</header>
+
+<main>
+
+<div class="sitehero">
+  <h1>むずかしい言葉を、<br><span class="mark">たとえ話</span>にほどく。</h1>
+  <p>言葉の意味だけ知っても、たいてい使えるようにはならない。「なんでそれが必要になったのか」まで一緒に読めるように作った解説シリーズです。下の索引からは、言葉を引いて、その場面の説明まで飛べます。</p>
+</div>
+
+<section id="pages">
+  <h2>解説ページ</h2>
+  <p class="lead">気になったところから、どうぞ。1本20分ほど。</p>
+  <div class="cards" id="cards"></div>
+</section>
+
+<section id="glossary">
+  <h2>用語索引</h2>
+  <p class="lead">各ページのミニ辞典を横断してまとめたもの。<span class="pen" id="term-count"></span></p>
+  <div class="chips" id="chips"></div>
+  <div class="gidx" id="gidx"></div>
+</section>
+
+<section id="howto">
+  <h2>ページを増やすときは</h2>
+  <p class="lead">この3つを触れば、索引まで自動で更新されます。</p>
+  <ol class="steps">
+    <li><b>解説ページを1枚作る。</b>既存の <code>websocket.html</code> を複製し、<code>&lt;link rel="stylesheet" href="assets/site.css"&gt;</code> はそのまま。見た目は自動でそろいます。</li>
+    <li><b><code>index.html</code> の <code>PAGES</code> に1行足す。</b>ファイル名・タイトル・ひとこと説明・帯の色キーを書けば、カードが増えます。</li>
+    <li><b>同じく <code>TERMS</code> に用語を足す。</b><code>read</code>（よみ）を書いておくと、あいうえお順の正しい位置に並びます。</li>
+  </ol>
+  <p class="howto">CSSは <code>assets/site.css</code> の1枚だけ。全ページが同じものを読んでいるので、色や余白を変えたいときはここを直せば全体に反映されます。ファイルはすべて同じフォルダに置いたまま使ってください。</p>
+</section>
+
+</main>
+
+<footer>
+  <p>やさしい技術解説シリーズ。たとえ話・図解・クイズで、技術のことばを「なんのために生まれたか」から説明しています。</p>
+  <p class="footver">用語集トップ　v1.3.0</p>
+</footer>
+
+</div>
+
+<script>
+"use strict";
+var APP_VERSION = "1.3.0";
+
+/* ============ ページ一覧 ============ */
+var PAGES = [
+  {
+    key:"mcp", file:"mcp.html", no:"01",
+    title:"MCPのしくみ",
+    q:"AIは、外の道具を借りて動いている。",
+    meta:"AIが外のサービスにつながるための共通ルール。ケーブルの本数の話から。"
+  },
+  {
+    key:"cicd", file:"cicd.html", no:"02",
+    title:"CI/CDのしくみ",
+    q:"直したものを、こわがらずに届けるために。",
+    meta:"直してから届くまでを自動化する話。夏休みの宿題をためると、どうなるか。"
+  },
+  {
+    key:"websocket", file:"websocket.html", no:"03",
+    title:"WebSocketのしくみ",
+    q:"「まだ？」と聞きに行かなくてよくなった日。",
+    meta:"つなぎっぱなしの通信。ページ末尾に、新人エンジニア向けの詳細章つき。"
+  },
+  {
+    key:"flyway", file:"flyway.html", no:"04",
+    title:"Flywayのしくみ",
+    q:"データベースだけ、やり直しがきかない。",
+    meta:"DBの形を全環境でそろえる話。どこまで流したかを、DB自身に覚えさせる。"
+  },
+  {
+    key:"getdown", file:"getdown.html", no:"05",
+    title:"Getdownのしくみ",
+    q:"配ったあとに、直せるようにする。",
+    meta:"配布済みアプリの自動更新。起動前に、変わったファイルだけ入れ替える。"
+  },
+  {
+    key:"angular", file:"angular.html", no:"06",
+    title:"Angularのしくみ",
+    q:"画面を、部品に切り分ける。",
+    meta:"画面を部品の集まりとして組み立てる話。データを変えれば、画面が追いつく。"
+  },
+  {
+    key:"bigip", file:"bigip.html", no:"07",
+    title:"BIG-IPのしくみ",
+    q:"入口を1つにして、裏を何台にでも。",
+    meta:"ロードバランサの代表格。受けて、選んで、渡す。1台落ちても止まらない作り。"
+  },
+  {
+    key:"spring", file:"spring.html", no:"08",
+    title:"Springのしくみ",
+    q:"部品の組み立てを、任せてしまう。",
+    meta:"newを書かない理由。DIとBean、そしてSpring Bootが何を肩代わりしているか。"
+  },
+  {
+    key:"docker", file:"docker.html", no:"09",
+    title:"Dockerのしくみ",
+    q:"「私のPCでは動く」を、なくすために。",
+    meta:"動かすのに必要なもの一式を箱に詰める話。仮想マシンとの違いから。"
+  },
+  {
+    key:"k8s", file:"kubernetes.html", no:"10",
+    title:"Kubernetesのしくみ",
+    q:"落ちたら、勝手に起き上がる。",
+    meta:"手順ではなく、あるべき姿を書く。壊れる前提で直し続けるという発想。"
+  }
+];
+
+/* ============ 用語（各ページのミニ辞典を横断） ============ */
+var TERMS = [
+  /* --- MCP --- */
+  {t:"MCP", read:"MCP", page:"mcp", anchor:"",
+   d:"Model Context Protocol。AIが外のサービスを使うときの、つなぎ方の共通ルール。AIの世界のUSB Type-Cにあたる。"},
+  {t:"プロトコル", read:"ぷろとこる", page:"mcp", anchor:"#words",
+   d:"機械どうしが会話するときの決まりごと。言葉づかいのルールブックのようなもの。MCPの「P」はこれ。"},
+  {t:"MCPホスト", read:"MCPほすと", page:"mcp", anchor:"#words",
+   d:"AIが動いているアプリ本体。チャットの画面や、プログラムを書くための道具など。"},
+  {t:"MCPサーバー", read:"MCPさーばー", page:"mcp", anchor:"#words",
+   d:"サービス側に置く窓口。「うちではこの道具と、このデータが使えます」とAIに知らせる役。"},
+  {t:"オープンな規格", read:"おーぷんなきかく", page:"mcp", anchor:"#words",
+   d:"仕様が公開されていて、誰でも同じルールで作れる状態。MCPは2024年に Anthropic が公開した。"},
+  {t:"ツール", read:"つーる", page:"mcp", anchor:"#three",
+   d:"MCPサーバーが差し出す「手」。予定を登録する、メールを送るなど、実際に何かをする機能。"},
+  {t:"リソース", read:"りそーす", page:"mcp", anchor:"#three",
+   d:"MCPサーバーが差し出す「目」。ファイルの中身や一覧など、読み取るためのデータ。"},
+  {t:"プロンプト", read:"ぷろんぷと", page:"mcp", anchor:"#three",
+   d:"MCPサーバーが差し出す「メモ」。よく使う頼み方をあらかじめ用意しておいた、定型の指示文。"},
+
+  /* --- CI/CD --- */
+  {t:"CI", read:"CI", page:"cicd", anchor:"#cicd",
+   d:"Continuous Integration。直しをこまめに1か所へ集めて、そのたびに組み立てとテストを自動で走らせること。"},
+  {t:"CD", read:"CD", page:"cicd", anchor:"#cicd",
+   d:"Continuous Delivery（／Deployment）。合格したものを、いつでも本番へ出せる状態まで自動で運ぶこと。"},
+  {t:"コミット", read:"こみっと", page:"cicd", anchor:"#words",
+   d:"直した内容を「ここまでできた」と記録して、共有の保管庫に置くこと。CI/CDは、たいていこれが合図で動きだす。"},
+  {t:"ビルド", read:"びるど", page:"cicd", anchor:"#words",
+   d:"人が書いた文字の状態から、コンピュータが実行できる形に組み立てること。プラモデルを説明書どおりに組む作業に近い。"},
+  {t:"パイプライン", read:"ぱいぷらいん", page:"cicd", anchor:"#words",
+   d:"組み立て・テスト・配置といった作業を、順番につないだ一本道。工場のベルトコンベア。"},
+  {t:"デプロイ", read:"でぷろい", page:"cicd", anchor:"#words",
+   d:"できあがったものを、実際に動く場所へ置くこと。「本番にデプロイする」＝みんなが使う場所に届ける。"},
+  {t:"ロールバック", read:"ろーるばっく", page:"cicd", anchor:"#words",
+   d:"出したものに問題があったとき、ひとつ前の状態に戻すこと。素早く戻せることが、安心のもとになる。"},
+
+  /* --- WebSocket --- */
+  {t:"WebSocket", read:"WebSocket", page:"websocket", anchor:"",
+   d:"つなぎっぱなしの通信。一度つなげば、サーバーからでもブラウザからでも、いつでも話しかけられる。"},
+  {t:"HTTP", read:"HTTP", page:"websocket", anchor:"#words",
+   d:"Webのふつうの話し方。「これください」「はいどうぞ」で1回ぶんが完結する。WebSocketも最初のあいさつだけはこれを使う。"},
+  {t:"ハンドシェイク", read:"はんどしぇいく", page:"websocket", anchor:"#d1",
+   d:"握手のこと。「これから電話に切りかえます」という最初の1往復。成立すると 101 が返り、通信路がWebSocketに変わる。"},
+  {t:"ポーリング", read:"ぽーりんぐ", page:"websocket", anchor:"#words",
+   d:"「新しいの、ある？」と何度も聞きに行くやり方。WebSocketが生まれる前は、これしかなかった。"},
+  {t:"フレーム", read:"ふれーむ", page:"websocket", anchor:"#d2",
+   d:"WebSocketで流れるデータのひとかたまり。ヘッダは2〜14バイトで、HTTPより桁ちがいに軽い。"},
+  {t:"ping / pong", read:"ping", page:"websocket", anchor:"#d4",
+   d:"回線がまだ生きているかを確かめる合図。片方が ping を投げ、もう片方が pong を返す。"},
+  {t:"wss://", read:"wss", page:"websocket", anchor:"#words",
+   d:"暗号化されたWebSocketのアドレス。https:// と同じ関係で、今はこちらを使うのがふつう。"},
+  {t:"SSE", read:"SSE", page:"websocket", anchor:"#when",
+   d:"Server-Sent Events。サーバーから送るだけでよい場合の軽い選択肢。HTTPのまま使えて、再接続はブラウザが面倒を見てくれる。"},
+
+  /* --- Flyway --- */
+  {t:"Flyway", read:"Flyway", page:"flyway", anchor:"",
+   d:"データベースの形を、決められたSQLの積み重ねで管理する道具。どこまで当てたかを、データベース自身に記録させる。"},
+  {t:"マイグレーション", read:"まいぐれーしょん", page:"flyway", anchor:"#words",
+   d:"データベースの形を1段階進めるための変更。またはその変更を書いたSQLファイル1枚のこと。"},
+  {t:"履歴テーブル", read:"りれきてーぶる", page:"flyway", anchor:"#words",
+   d:"Flywayがデータベースの中に作る管理用のテーブル。どのファイルをいつ当てたかが記録される。"},
+  {t:"チェックサム", read:"ちぇっくさむ", page:"flyway", anchor:"#words",
+   d:"ファイルの中身から計算した短い値。当てたあとに書きかえられていないかの判定に使われる。"},
+  {t:"baseline", read:"baseline", page:"flyway", anchor:"#words",
+   d:"すでに存在するデータベースを「ここが出発点」と宣言する操作。途中から導入するときに使う。"},
+  {t:"repeatable マイグレーション", read:"repeatable", page:"flyway", anchor:"#rules",
+   d:"R__ で始まるファイル。中身が変わるたびに流し直される。ビューやストアドプロシージャの定義に向く。"},
+  {t:"冪等（べきとう）", read:"べきとう", page:"flyway", anchor:"#words",
+   d:"何回実行しても同じ結果になる性質。マイグレーションを書くときに意識しておくと事故が減る。"},
+
+  /* --- Getdown --- */
+  {t:"Getdown", read:"Getdown", page:"getdown", anchor:"",
+   d:"配布済みのJavaアプリを自動で最新にするランチャー。本体より先に起動し、変わったファイルだけ入れ替えてから本体を立ち上げる。"},
+  {t:"ランチャー", read:"らんちゃー", page:"getdown", anchor:"#words",
+   d:"本体より先に起動して、準備をしてからアプリを立ち上げる小さなプログラム。"},
+  {t:"appbase", read:"appbase", page:"getdown", anchor:"#words",
+   d:"更新ファイルが置いてあるURL。設定に書かれたファイル名は、すべてこの場所を基準に組み立てられる。"},
+  {t:"getdown.txt", read:"getdown", page:"getdown", anchor:"#files",
+   d:"人が書く設定ファイル。配布元のURL、読み込むjar、起動するクラスなどを書く。"},
+  {t:"digest", read:"digest", page:"getdown", anchor:"#files",
+   d:"ファイルの一覧とハッシュ値を書いた表。手元と見くらべて、変わったものを見つけるために使う。"},
+  {t:"ハッシュ", read:"はっしゅ", page:"getdown", anchor:"#words",
+   d:"ファイルの中身から計算した短い値。中身が1バイトでも違えば別の値になるので、同じかどうかの判定に使える。"},
+  {t:"Java Web Start", read:"Java", page:"getdown", anchor:"#words",
+   d:"かつてブラウザ経由でJavaアプリを起動・更新していた仕組み。廃止されたことが、ランチャー方式が使われる背景になっている。"},
+
+  /* --- Angular --- */
+  {t:"Angular", read:"Angular", page:"angular", anchor:"",
+   d:"画面を部品の集まりとして組み立てるWebアプリのフレームワーク。画面遷移も通信もフォーム検証も最初から入っている。"},
+  {t:"コンポーネント", read:"こんぽーねんと", page:"angular", anchor:"#words",
+   d:"画面の部品。見た目のテンプレートと、そのふるまいを書いたクラスがセットになったもの。"},
+  {t:"テンプレート", read:"てんぷれーと", page:"angular", anchor:"#words",
+   d:"部品の見た目を書いたHTML。値を差し込んだり、繰り返したりする書き方が足されている。"},
+  {t:"バインディング", read:"ばいんでぃんぐ", page:"angular", anchor:"#words",
+   d:"プログラムの中の値と、画面の表示を結びつけること。値が変われば表示も変わる。"},
+  {t:"ルーティング", read:"るーてぃんぐ", page:"angular", anchor:"#words",
+   d:"URLと画面の対応づけ。これがあるので、戻るボタンやブックマークが自然に動く。"},
+  {t:"SPA", read:"SPA", page:"angular", anchor:"#words",
+   d:"Single Page Application。ページ全体を読み込み直さず、中身だけを差し替えて動くWebアプリの作り方。"},
+
+  /* --- BIG-IP --- */
+  {t:"BIG-IP", read:"BIG-IP", page:"bigip", anchor:"",
+   d:"F5社のロードバランサ／ADC。入口を1つに保ったまま、裏側のサーバーを何台にでも増やせるようにする機械。"},
+  {t:"ロードバランサ", read:"ろーどばらんさ", page:"bigip", anchor:"#words",
+   d:"複数のサーバーへアクセスを振り分ける機械やソフト。1台が落ちてもサービスを続けられるようにする。"},
+  {t:"仮想サーバー（VIP）", read:"かそうさーばー", page:"bigip", anchor:"#words",
+   d:"利用者に見せる、たった1つの入口。実際のサーバーではなく、受付窓口として作られたアドレス。"},
+  {t:"プール", read:"ぷーる", page:"bigip", anchor:"#words",
+   d:"振り分け先のサーバーをまとめたグループ。その中の1台1台をプールメンバーと呼ぶ。"},
+  {t:"ヘルスモニター", read:"へるすもにたー", page:"bigip", anchor:"#words",
+   d:"各サーバーが生きているかを定期的に確認するしくみ。返事がない台は自動で振り分け先から外れる。"},
+  {t:"パーシステンス", read:"ぱーしすてんす", page:"bigip", anchor:"#words",
+   d:"同じ利用者を同じサーバーへ送り続ける設定。サーバー側が状態を持っている場合に必要になる。"},
+  {t:"SSL終端", read:"SSLしゅうたん", page:"bigip", anchor:"#words",
+   d:"利用者との暗号化通信を入口で解くこと。証明書の管理を1か所にまとめられる。"},
+  {t:"iRule", read:"iRule", page:"bigip", anchor:"#words",
+   d:"BIG-IP上で動かせる小さなスクリプト。条件に応じて振り分け先を変えるなど、細かい制御ができる。"},
+
+  /* --- Spring --- */
+  {t:"Spring", read:"Spring", page:"spring", anchor:"",
+   d:"Javaのフレームワーク。部品の組み立て（DI）を引き受け、使う側が「これが要る」と書くだけで済むようにする。"},
+  {t:"Bean", read:"Bean", page:"spring", anchor:"#words",
+   d:"Springが管理している部品1つ1つのこと。目印を付けたクラスは、起動時に作られてBeanになる。"},
+  {t:"DIコンテナ", read:"DIこんてな", page:"spring", anchor:"#words",
+   d:"Beanを作って保管し、必要なところへ配る入れ物。Springの中心にある仕組み。"},
+  {t:"アノテーション", read:"あのてーしょん", page:"spring", anchor:"#words",
+   d:"@ で始まる目印。クラスやメソッドに意味を持たせ、フレームワークに扱い方を伝える。"},
+  {t:"AOP", read:"AOP", page:"spring", anchor:"#words",
+   d:"本来の処理の前後に、共通の処理をはさみ込む仕組み。トランザクションやログの記録に使われる。"},
+  {t:"Spring Boot", read:"Spring Boot", page:"spring", anchor:"#family",
+   d:"よくある構成の初期設定をあらかじめ用意したもの。Webサーバーも同梱され、1つ実行すれば動く形にできる。"},
+
+  /* --- Docker --- */
+  {t:"Docker", read:"Docker", page:"docker", anchor:"",
+   d:"アプリと、動かすのに必要なもの一式を箱に詰めて、どこでも同じように動かすための仕組み。"},
+  {t:"イメージ", read:"いめーじ", page:"docker", anchor:"#words",
+   d:"アプリと必要なもの一式を固めた完成品。たい焼きの型にあたる、まだ動いていない状態のもの。"},
+  {t:"コンテナ", read:"こんてな", page:"docker", anchor:"#words",
+   d:"イメージから作られた、実際に動いている箱。同じイメージから、いくつでも作れる。"},
+  {t:"Dockerfile", read:"Dockerfile", page:"docker", anchor:"#words",
+   d:"イメージの作り方を書いた手順書。何を入れて、どう起動するかを上から順に書く。"},
+  {t:"レジストリ", read:"れじすとり", page:"docker", anchor:"#words",
+   d:"イメージを置いておく倉庫。ここに上げておけば、別の場所から取ってきて動かせる。"},
+  {t:"ボリューム", read:"ぼりゅーむ", page:"docker", anchor:"#words",
+   d:"箱の外にある保存領域。消えては困るデータを置き、箱に繋いで使う。"},
+  {t:"レイヤー", read:"れいやー", page:"docker", anchor:"#words",
+   d:"イメージを構成する層。変わっていない層は再利用されるので、作り直しが速くなる。"},
+
+  /* --- Kubernetes --- */
+  {t:"Kubernetes", read:"Kubernetes", page:"k8s", anchor:"",
+   d:"たくさんのコンテナを自動で管理する仕組み。手順ではなく「こうあってほしい姿」を書くと、その状態に近づけ続ける。"},
+  {t:"コンテナオーケストレーション", read:"こんてなおーけすとれーしょん", page:"k8s", anchor:"#words",
+   d:"たくさんのコンテナを、どこで何個動かすか自動で管理すること。Kubernetesはその代表格。"},
+  {t:"Pod", read:"Pod", page:"k8s", anchor:"#parts",
+   d:"Kubernetesが扱う最小の単位。コンテナを1つ以上まとめたもので、使い捨てが前提。"},
+  {t:"Deployment", read:"Deployment", page:"k8s", anchor:"#parts",
+   d:"「このPodを常に何個」を宣言する係。数を保ち、新しい版への入れ替えも少しずつ進めてくれる。"},
+  {t:"Service", read:"Service", page:"k8s", anchor:"#parts",
+   d:"入れ替わり続けるPodの前に置く、変わらない入口。生きているPodへ振り分ける。"},
+  {t:"マニフェスト", read:"まにふぇすと", page:"k8s", anchor:"#words",
+   d:"あるべき姿を書いたファイル。手順ではなく結果を書くので「宣言的」と呼ばれる。"},
+  {t:"ノード／クラスタ", read:"のーど", page:"k8s", anchor:"#words",
+   d:"Podが実際に動くサーバー1台が「ノード」、それらをまとめた全体が「クラスタ」。"},
+  {t:"スケジューラ", read:"すけじゅーら", page:"k8s", anchor:"#words",
+   d:"新しいPodをどのノードに置くか決める係。空き具合や条件を見て、置き場所を選ぶ。"}
+];
+
+/* ============ 表示 ============ */
+var ROWS = [
+  ["あ行","あいうえぉぁぃぅぇお"],
+  ["か行","かがきぎくぐけげこご"],
+  ["さ行","さざしじすずせぜそぞ"],
+  ["た行","たちつてとだぢづでどっ"],
+  ["な行","なにぬねの"],
+  ["は行","はばぱひびぴふぶぷへべぺほぼぽ"],
+  ["ま行","まみむめも"],
+  ["や行","やゆよゃゅょ"],
+  ["ら行","らりるれろ"],
+  ["わ行","わをん"]
+];
+
+function rowOf(read){
+  var c = read.charAt(0);
+  if(/[A-Za-z0-9]/.test(c)) return "A–Z";
+  for(var i = 0; i < ROWS.length; i++){
+    if(ROWS[i][1].indexOf(c) >= 0) return ROWS[i][0];
+  }
+  return "その他";
+}
+
+function pageOf(key){
+  for(var i = 0; i < PAGES.length; i++){
+    if(PAGES[i].key === key) return PAGES[i];
+  }
+  return null;
+}
+
+function renderCards(){
+  var host = document.getElementById("cards");
+  var html = "";
+  PAGES.forEach(function(p){
+    var n = TERMS.filter(function(t){ return t.page === p.key; }).length;
+    html += '<a class="cardlink" href="' + p.file + '">' +
+              '<span class="no">' + p.no + '</span>' +
+              '<h3>' + p.title + '</h3>' +
+              '<p class="q">' + p.q + '</p>' +
+              '<p class="meta">' + p.meta + '　／　用語 ' + n + '語</p>' +
+              '<span class="go">読んでみる →</span>' +
+            '</a>';
+  });
+  host.innerHTML = html;
+}
+
+var filter = "all";
+
+function renderChips(){
+  var host = document.getElementById("chips");
+  var list = [{k:"all", label:"すべて"}];
+  PAGES.forEach(function(p){ list.push({k:p.key, label:p.title.replace("のしくみ","")}); });
+
+  host.innerHTML = list.map(function(c){
+    return '<button type="button" data-k="' + c.k + '" aria-pressed="' +
+           (c.k === filter ? "true" : "false") + '">' + c.label + '</button>';
+  }).join("");
+
+  Array.prototype.forEach.call(host.querySelectorAll("button"), function(b){
+    b.addEventListener("click", function(){
+      filter = b.dataset.k;
+      renderChips();
+      renderIndex();
+    });
+  });
+}
+
+function renderIndex(){
+  var host = document.getElementById("gidx");
+  var items = TERMS.filter(function(t){ return filter === "all" || t.page === filter; });
+
+  items.sort(function(a, b){ return a.read.localeCompare(b.read, "ja"); });
+
+  var order = ["A–Z"];
+  ROWS.forEach(function(r){ order.push(r[0]); });
+  order.push("その他");
+
+  var buckets = {};
+  items.forEach(function(t){
+    var r = rowOf(t.read);
+    (buckets[r] = buckets[r] || []).push(t);
+  });
+
+  var html = "";
+  order.forEach(function(r){
+    if(!buckets[r]) return;
+    html += '<div class="grow"><h3>' + r + '</h3><ul class="terms">';
+    buckets[r].forEach(function(t){
+      var p = pageOf(t.page);
+      html += '<li class="term">' +
+                '<div class="head"><dfn>' + t.t + '</dfn>' +
+                '<span class="src ' + t.page + '">' + p.title.replace("のしくみ","") + '</span></div>' +
+                '<p>' + t.d + '</p>' +
+                '<a href="' + p.file + t.anchor + '">この言葉が出てくる場面へ →</a>' +
+              '</li>';
+    });
+    html += '</ul></div>';
+  });
+
+  host.innerHTML = html || '<p class="empty">この絞りこみに当てはまる用語はありません。</p>';
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  document.getElementById("version").textContent = "v" + APP_VERSION;
+  document.getElementById("term-count").textContent =
+    "全 " + TERMS.length + " 語 ／ " + PAGES.length + " ページ分";
+  renderCards();
+  renderChips();
+  renderIndex();
+});
+</script>
+</body>
+</html>

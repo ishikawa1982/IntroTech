@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCPのしくみ — AIが「外の道具」を借りるための共通ルール</title>
+<meta name="description" content="MCP（モデル・コンテキスト・プロトコル）を、身近なたとえ話・図解・クイズでたどる解説ページ。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="topbar">
+  <span class="logo">MCPのしくみ</span>
+  <span class="ver" id="version">v3.0.0</span>
+  <a class="home" href="index.html">← 用語集トップ</a>
+</header>
+
+<main>
+
+<div class="hero">
+  <h1>AIは、外の道具を<br><span class="mark">借りて</span>動いている。</h1>
+  <p>「明日の予定を教えて」と聞くと、AIが答えを返してくる。でもAIは、きみの予定表を最初から知っているわけじゃない。裏側では、道具を借りにいくためのやりとりが起きている。その借り方の決まりごとが <strong>MCP</strong> だ。</p>
+
+  <div class="chain">
+    <p class="chain-title">「明日の予定を教えて」と聞いたときの、裏側のバケツリレー——</p>
+    <ol>
+      <li>
+        <span class="node now">きみ<small>質問する</small></span>
+        <span class="say">「明日の予定を教えて」</span>
+      </li>
+      <li class="arrowline">たのむ</li>
+      <li>
+        <span class="node">AI<small>考える役</small></span>
+        <span class="say">カレンダーの道具が使えそうだ、と判断する</span>
+      </li>
+      <li class="arrowline">道具を借りる</li>
+      <li>
+        <span class="node hub">MCP<small>共通の差し込み口</small></span>
+        <span class="say">どのAIからでも同じ形で頼める窓口</span>
+      </li>
+      <li class="arrowline">取ってくる</li>
+      <li>
+        <span class="node">カレンダー<small>本物のデータ</small></span>
+        <span class="say">明日の予定がしまってある場所</span>
+      </li>
+    </ol>
+  </div>
+  <p class="lead" style="margin-bottom:0">AIが自分でカレンダーを開いているわけじゃない。<span class="pen">お願いを出しているだけ</span>、というのが今日いちばん大事なところ。</p>
+</div>
+
+<section id="why">
+  <h2>なんで、こんな決まりごとが必要なの？</h2>
+  <p class="lead">答えはシンプル。<span class="mark pink">つなぎ方がバラバラで、大変だったから。</span></p>
+
+  <div class="notes">
+    <div class="note">
+      <h3>むかしの充電ケーブルと同じ話</h3>
+      <p>ひと昔前のケータイは、機種ごとに充電の差し込み口の形がちがった。友だちのケーブルは借りられないし、家じゅうにケーブルが増えていった。</p>
+      <p class="eg">今は USB Type-C にそろってきて、1本あればだいたい挿さる。MCPは、これをAIの世界でやろうという取り決め。</p>
+    </div>
+
+    <div class="note">
+      <h3>組み合わせの数が、こわい</h3>
+      <p>AIが3種類、つなぎたいサービスが3種類あるとする。決まりがないと、その組み合わせぶんだけ専用のつなぎ役プログラムを作ることになる。3×3で9本。</p>
+      <p class="eg">AIが5種類、サービスが10種類になったら50本。作るのも大変だし、直すのはもっと大変になる。</p>
+    </div>
+
+    <div class="note">
+      <h3>まん中に「共通の口」を置く</h3>
+      <p>それぞれが好きな形でつなぐのをやめて、まん中に共通の差し込み口をひとつ用意する。AI側は「MCPの口に挿す」だけ、サービス側も「MCPの口を用意する」だけでよくなる。</p>
+      <p class="eg">これで、あとから新しいサービスが増えても、AIのほうを作り直さなくてよくなった。</p>
+    </div>
+  </div>
+</section>
+
+<section id="tangle">
+  <h2>ケーブルの本数で見てみる</h2>
+  <p class="lead">ボタンで切りかえて、線の数のちがいを見てみよう。</p>
+
+  <div class="board">
+    <div class="switch">
+      <button type="button" id="btn-before" aria-pressed="true">MCPがないと</button>
+      <button type="button" id="btn-after" aria-pressed="false">MCPがあると</button>
+    </div>
+    <p class="tally">作るつなぎ役プログラム　<b id="tally-num">9</b> 本</p>
+    <figure style="margin:0">
+      <svg viewBox="0 0 600 290" role="img" aria-label="MCPがない場合はAIとサービスを総当たりでつなぐ9本の線、MCPがある場合は共通の差し込み口を通る6本の線になることを示す図">
+        <g font-family="'Zen Maru Gothic',sans-serif">
+          <g>
+            <rect x="26" y="16" width="128" height="46" rx="10" fill="#9BDDF3" stroke="#16263F" stroke-width="2"/>
+            <text x="90" y="45" text-anchor="middle" font-size="15" font-weight="700" fill="#16263F">AI ①</text>
+            <rect x="236" y="16" width="128" height="46" rx="10" fill="#9BDDF3" stroke="#16263F" stroke-width="2"/>
+            <text x="300" y="45" text-anchor="middle" font-size="15" font-weight="700" fill="#16263F">AI ②</text>
+            <rect x="446" y="16" width="128" height="46" rx="10" fill="#9BDDF3" stroke="#16263F" stroke-width="2"/>
+            <text x="510" y="45" text-anchor="middle" font-size="15" font-weight="700" fill="#16263F">AI ③</text>
+          </g>
+
+          <g id="lines-before" fill="none" stroke-width="3" stroke-linecap="round">
+            <path d="M90 62 Q90 150 90 216" stroke="#E4453A"/>
+            <path d="M90 62 Q190 150 296 216" stroke="#54677E"/>
+            <path d="M90 62 Q290 140 504 216" stroke="#54677E"/>
+            <path d="M300 62 Q190 140 96 216" stroke="#54677E"/>
+            <path d="M300 62 Q300 150 300 216" stroke="#E4453A"/>
+            <path d="M300 62 Q400 150 500 216" stroke="#54677E"/>
+            <path d="M510 62 Q310 140 100 216" stroke="#54677E"/>
+            <path d="M510 62 Q410 150 306 216" stroke="#54677E"/>
+            <path d="M510 62 Q510 150 510 216" stroke="#E4453A"/>
+          </g>
+
+          <g id="lines-after" class="hidden">
+            <g fill="none" stroke-width="3" stroke-linecap="round" stroke="#16263F">
+              <path d="M90 62 Q90 96 234 116"/>
+              <path d="M300 62 Q300 90 300 114"/>
+              <path d="M510 62 Q510 96 366 116"/>
+              <path d="M234 172 Q90 192 90 216"/>
+              <path d="M300 174 Q300 196 300 216"/>
+              <path d="M366 172 Q510 192 510 216"/>
+            </g>
+            <rect x="222" y="112" width="156" height="62" rx="12" fill="#D3C4F2" stroke="#16263F" stroke-width="2"/>
+            <text x="300" y="140" text-anchor="middle" font-size="16" font-weight="700" fill="#16263F">MCP</text>
+            <text x="300" y="160" text-anchor="middle" font-size="12" fill="#16263F" font-family="'Zen Kaku Gothic New',sans-serif">共通の差し込み口</text>
+          </g>
+
+          <g>
+            <rect x="26" y="216" width="128" height="46" rx="10" fill="#FFE066" stroke="#16263F" stroke-width="2"/>
+            <text x="90" y="245" text-anchor="middle" font-size="14" font-weight="700" fill="#16263F">カレンダー</text>
+            <rect x="236" y="216" width="128" height="46" rx="10" fill="#FFE066" stroke="#16263F" stroke-width="2"/>
+            <text x="300" y="245" text-anchor="middle" font-size="14" font-weight="700" fill="#16263F">ファイル</text>
+            <rect x="446" y="216" width="128" height="46" rx="10" fill="#FFE066" stroke="#16263F" stroke-width="2"/>
+            <text x="510" y="245" text-anchor="middle" font-size="14" font-weight="700" fill="#16263F">チャット</text>
+          </g>
+        </g>
+      </svg>
+      <figcaption>上の青がAI、下の黄色がサービス。MCPがないと総当たりで9本。あいだに紫の差し込み口を置くと、3＋3で6本になる。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="calc">
+  <h2>数を変えると、どれくらい差がつく？</h2>
+  <p class="lead">AIとサービスの数を選ぶと、必要な本数を計算する。<span class="pen">増やすほど差が開く</span>のが見どころ。</p>
+  <div class="calcbox">
+    <div class="calcrow">
+      <div>
+        <label for="ai-n">AIの数</label>
+        <select id="ai-n"></select>
+      </div>
+      <div>
+        <label for="svc-n">サービスの数</label>
+        <select id="svc-n"></select>
+      </div>
+    </div>
+    <div class="result" id="calc-result"></div>
+  </div>
+</section>
+
+<section id="flow">
+  <h2>4つのステップを、開いて確かめる</h2>
+  <p class="lead">それぞれの場面で<span class="pen">「誰が何をしているか」</span>をタップして開いてみよう。</p>
+
+  <div class="tree">
+    <h3>「明日の予定を教えて」と聞いてから、答えが返るまで</h3>
+    <div class="step-list" id="tree-flow"></div>
+  </div>
+</section>
+
+<section id="three">
+  <h2>MCPが差し出せる、3つのもの</h2>
+  <p class="lead">サービス側に置く窓口を <span class="mark cyan">MCPサーバー</span> と呼ぶ。渡せるものは大きく3種類。</p>
+  <div class="notes">
+    <div class="note">
+      <h3>ツール ＝ 手</h3>
+      <p>実際に何かをする機能。予定を登録する、メールを送る、検索する。AIの手にあたる部分。</p>
+      <p class="eg">手なので、使うと現実が変わる。だからいちばん慎重にあつかわれる。</p>
+    </div>
+    <div class="note">
+      <h3>リソース ＝ 目</h3>
+      <p>読み取るためのデータ。ファイルの中身、商品の一覧、記録された数値。</p>
+      <p class="eg">見るだけで、書きかえはしない。見せる範囲は人が決められる。</p>
+    </div>
+    <div class="note">
+      <h3>プロンプト ＝ メモ</h3>
+      <p>「こういうときは、こう頼むとうまくいく」という定型の指示文。</p>
+      <p class="eg">よく使う手順をあらかじめ置いておける、ちょっとしたカンニングペーパー。</p>
+    </div>
+  </div>
+</section>
+
+<section id="quiz">
+  <h2>クイズ：きみは何問わかる？</h2>
+  <p class="lead">全5問。まちがえても大丈夫、答えのほうが面白い。</p>
+  <div class="quiz" id="quiz"></div>
+</section>
+
+<section id="safe">
+  <h2>勝手に動いたりしないの？</h2>
+  <p class="lead">ここは大人もよく気にするところ。</p>
+  <ol class="steps">
+    <li><b>触れる範囲は、あらかじめ決めておく。</b>「カレンダーを読む」しか許していなければ、AIが予定を消すことはできない。</li>
+    <li><b>使う直前に、人に聞く。</b>多くのAIアプリは、道具を使う前に「これ、やっていい？」と確認を出す。</li>
+    <li><b>記録が残る。</b>いつ、どの道具を、何のために使ったかを後から確かめられる。</li>
+    <li><b>決まりがそろったから、見張りやすい。</b>つなぎ方がバラバラだった頃より、どこまで許したかを人が把握しやすくなった。</li>
+  </ol>
+</section>
+
+<section id="words">
+  <h2>ことばのミニ辞典</h2>
+  <p class="lead">この先どこかで見かけたときのために。</p>
+  <dl class="words">
+    <dt>プロトコル</dt>
+    <dd>機械どうしが会話するときの決まりごと。言葉づかいのルールブックのようなもの。MCPの「P」はこれ。</dd>
+    <dt>MCPホスト</dt>
+    <dd>AIが動いているアプリ本体。チャットの画面や、プログラムを書くための道具など。</dd>
+    <dt>MCPサーバー</dt>
+    <dd>サービス側に置く窓口。「うちではこの道具と、このデータが使えます」とAIに知らせる役。</dd>
+    <dt>オープンな規格</dt>
+    <dd>仕様が公開されていて、誰でも同じルールで作れる状態。MCPは2024年に Anthropic が公開した。</dd>
+  </dl>
+</section>
+
+<section class="sibling">
+  <h2>ほかの解説ページ</h2>
+  <ul>
+    <li><a href="cicd.html"><b>CI/CDのしくみ</b><span>直したものを、こわがらずに届けるために。</span></a></li>
+    <li><a href="websocket.html"><b>WebSocketのしくみ</b><span>「まだ？」と聞きに行かなくてよくなった日。</span></a></li>
+    <li><a href="flyway.html"><b>Flywayのしくみ</b><span>データベースだけ、やり直しがきかない。</span></a></li>
+    <li><a href="getdown.html"><b>Getdownのしくみ</b><span>配ったあとに、直せるようにする。</span></a></li>
+    <li><a href="angular.html"><b>Angularのしくみ</b><span>画面を、部品に切り分ける。</span></a></li>
+    <li><a href="bigip.html"><b>BIG-IPのしくみ</b><span>入口を1つにして、裏を何台にでも。</span></a></li>
+    <li><a href="spring.html"><b>Springのしくみ</b><span>部品の組み立てを、任せてしまう。</span></a></li>
+    <li><a href="docker.html"><b>Dockerのしくみ</b><span>「私のPCでは動く」を、なくすために。</span></a></li>
+    <li><a href="kubernetes.html"><b>Kubernetesのしくみ</b><span>落ちたら、勝手に起き上がる。</span></a></li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <p>MCP（Model Context Protocol）を、たとえ話・図解・クイズでたどるやさしい解説ページです。技術の細かい仕様は、公開されている本家の仕様書をどうぞ。</p>
+  <p class="footver">MCPのしくみ　v3.0.0</p>
+</footer>
+
+</div>
+
+<script>
+"use strict";
+var APP_VERSION = "3.0.0";
+
+/* ============ ケーブル切りかえ ============ */
+function initSwitch(){
+  var before = document.getElementById("lines-before");
+  var after  = document.getElementById("lines-after");
+  var bBtn   = document.getElementById("btn-before");
+  var aBtn   = document.getElementById("btn-after");
+  var num    = document.getElementById("tally-num");
+  if(!before || !after) return;
+
+  function show(isBefore){
+    before.classList.toggle("hidden", !isBefore);
+    after.classList.toggle("hidden", isBefore);
+    bBtn.setAttribute("aria-pressed", isBefore ? "true" : "false");
+    aBtn.setAttribute("aria-pressed", isBefore ? "false" : "true");
+    num.textContent = isBefore ? "9" : "6";
+  }
+  bBtn.addEventListener("click", function(){ show(true); });
+  aBtn.addEventListener("click", function(){ show(false); });
+}
+
+/* ============ 本数の計算 ============ */
+function initCalc(){
+  var ai = document.getElementById("ai-n");
+  var svc = document.getElementById("svc-n");
+  var res = document.getElementById("calc-result");
+  if(!ai || !svc || !res) return;
+
+  for(var i = 1; i <= 12; i++){
+    var a = document.createElement("option");
+    a.value = String(i); a.textContent = i + "種類";
+    if(i === 3) a.selected = true;
+    ai.appendChild(a);
+
+    var b = document.createElement("option");
+    b.value = String(i); b.textContent = i + "種類";
+    if(i === 6) b.selected = true;
+    svc.appendChild(b);
+  }
+
+  function update(){
+    var m = parseInt(ai.value, 10);
+    var n = parseInt(svc.value, 10);
+    var without = m * n;
+    var with_ = m + n;
+    var max = Math.max(without, with_, 1);
+    var diff = without - with_;
+
+    var html = '<p class="rline">MCPがないと <strong>' + without + '本</strong>、MCPがあると <strong>' +
+               with_ + '本</strong>。差は <strong>' + diff + '本</strong>。</p>';
+
+    html += '<div class="bars">';
+    html += '<div><p class="bar-label">MCPなし　' + m + ' × ' + n + ' ＝ ' + without + '本</p>' +
+            '<div class="bar"><span style="width:' + (without / max * 100) + '%"></span></div></div>';
+    html += '<div><p class="bar-label">MCPあり　' + m + ' ＋ ' + n + ' ＝ ' + with_ + '本</p>' +
+            '<div class="bar good"><span style="width:' + (with_ / max * 100) + '%"></span></div></div>';
+    html += '</div>';
+
+    if(diff <= 0){
+      html += '<p class="rline" style="margin:0">数が少ないうちは、あまり差が出ない。むしろ決まりごとを覚えるぶん面倒なくらい。</p>';
+    } else if(diff < 20){
+      html += '<p class="rline" style="margin:0">もう差がつきはじめた。ここから数を増やすと、一気に開いていく。</p>';
+    } else {
+      html += '<p class="rline" style="margin:0">かけ算とたし算の差。作る人が何人いても、' + without + '本は現実的じゃない。</p>';
+    }
+
+    res.innerHTML = html;
+  }
+
+  ai.addEventListener("change", update);
+  svc.addEventListener("change", update);
+  update();
+}
+
+/* ============ 4ステップ ============ */
+var FLOW = [
+  {y:"1", n:"きみが聞く", t:"AIは、きみの予定表の中身を<b>ひとつも知らない</b>。学習したときの知識しか持っていない。", f:"「明日の予定を教えて」と打ち込む。ここからAIの仕事が始まる。"},
+  {y:"2", n:"AIが道具を選ぶ", t:"やりたいことはわかったが、<b>データがどこにあるかわからない</b>。", f:"つながっている窓口の一覧を見て、「カレンダーの道具が使えそうだ」と判断する。ここは考える役。"},
+  {y:"3", n:"MCPサーバーが動く", t:"AI本体には、カレンダーを直接開く力は<b>ない</b>。", f:"選ばれたMCPサーバーが、実際にカレンダーへ問い合わせて明日の予定を取ってくる。ここが手足の役。"},
+  {y:"4", n:"AIが答える", t:"返ってきたのは、人間には読みにくい生のデータ。", f:"それをAIが日本語の文章に整えて、きみに見せる。「明日は9時から練習だよ」。"}
+];
+
+function buildFlow(){
+  var host = document.getElementById("tree-flow");
+  if(!host) return;
+  FLOW.forEach(function(s, i){
+    var wrap = document.createElement("div");
+    wrap.className = "step";
+    wrap.setAttribute("aria-expanded","false");
+
+    var btnId = "flow-btn-" + i;
+    var panId = "flow-pan-" + i;
+
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = btnId;
+    btn.setAttribute("aria-controls", panId);
+    btn.setAttribute("aria-expanded","false");
+    btn.innerHTML = '<span class="yr">' + s.y + '</span><span class="nm">' + s.n +
+                    '</span><span class="plus" aria-hidden="true"></span>';
+
+    var pan = document.createElement("div");
+    pan.className = "detail";
+    pan.id = panId;
+    pan.hidden = true;
+    pan.setAttribute("role","region");
+    pan.setAttribute("aria-labelledby", btnId);
+    pan.innerHTML = '<p class="trouble">😖 このときの困りごと：' + s.t + '</p>' +
+                    '<p class="fix">💡 やっていること：' + s.f + '</p>';
+
+    btn.addEventListener("click", function(){
+      var open = pan.hidden;
+      pan.hidden = !open;
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      wrap.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    wrap.appendChild(btn);
+    wrap.appendChild(pan);
+    host.appendChild(wrap);
+  });
+}
+
+/* ============ クイズ ============ */
+var QUIZ = [
+  {
+    q:"MCPの「P」は、何のP？",
+    c:["Program（プログラム）","Protocol（決まりごと）","Package（荷物）","Platform（土台）"],
+    a:1,
+    e:"Model Context Protocol の頭文字。プロトコルは「機械どうしの話し方の決まりごと」。新しい機能そのものではなく、つなぎ方のルールだ、というのがMCPの正体。"
+  },
+  {
+    q:"AIに予定を聞いたとき、実際にカレンダーへ問い合わせているのは誰？",
+    c:["AI本体","MCPサーバー","きみのスマホ","カレンダーを作った会社の人"],
+    a:1,
+    e:"AIは「これを取ってきて」とお願いするだけ。実際に取りにいくのはMCPサーバーのほう。AIが自分で何でもできるわけではない、というのが大事なところ。"
+  },
+  {
+    q:"AIが4種類、サービスが5種類。MCPがないと、つなぎ役プログラムは何本必要？",
+    c:["9本","20本","5本","1本"],
+    a:1,
+    e:"4×5で20本。組み合わせの数だけ必要になる。MCPがあれば4＋5で9本ですむ。数が増えるほど、かけ算とたし算の差が効いてくる。"
+  },
+  {
+    q:"MCPサーバーが差し出すものに、当てはまらないのはどれ？",
+    c:["ツール（何かをする機能）","リソース（読み取るデータ）","プロンプト（定型の指示文）","AIの頭のよさ"],
+    a:3,
+    e:"MCPは、AIを賢くする仕組みではない。あくまで「外の道具とデータへの通り道」。AI自身の能力は、また別の話。"
+  },
+  {
+    q:"MCPがそろって、いちばん助かったのはどんなとき？",
+    c:["新しいサービスが増えたとき","AIが計算をまちがえたとき","スマホの電池が減ったとき","文章が長すぎたとき"],
+    a:0,
+    e:"サービス側がMCPの窓口をひとつ用意すれば、どのAIからでも使ってもらえる。AI側を作り直さなくていいので、新しい道具がどんどん増やせるようになった。"
+  }
+];
+
+var qIndex = 0, qScore = 0;
+
+function renderQuiz(){
+  var host = document.getElementById("quiz");
+  if(!host) return;
+
+  if(qIndex >= QUIZ.length){
+    var msg = qScore === 5 ? "全問正解。もう人に説明できるレベル。"
+            : qScore >= 3 ? "いい線いってる。まちがえた問題ほど、覚えて帰れる。"
+            : "ここからが面白いところ。上の4ステップをもう一度ひらいてみよう。";
+    host.innerHTML = '<p class="score">結果：' + qScore + ' / ' + QUIZ.length + ' 問正解</p>' +
+                     '<p style="margin:0 0 14px">' + msg + '</p>' +
+                     '<button class="qnext" type="button" id="again">もう一度やる</button>';
+    document.getElementById("again").addEventListener("click", function(){
+      qIndex = 0; qScore = 0; renderQuiz();
+    });
+    return;
+  }
+
+  var item = QUIZ[qIndex];
+  var html = '<div class="qhead"><span class="qcount">第' + (qIndex+1) + '問 / ' + QUIZ.length + '問</span></div>' +
+             '<p class="qtext">' + item.q + '</p><div class="choices">';
+  item.c.forEach(function(text, i){
+    html += '<button class="choice" type="button" data-i="' + i + '">' + text + '</button>';
+  });
+  html += '</div><div class="answer" id="answer" hidden></div>';
+  host.innerHTML = html;
+
+  var buttons = host.querySelectorAll(".choice");
+  Array.prototype.forEach.call(buttons, function(b){
+    b.addEventListener("click", function(){
+      var picked = parseInt(b.dataset.i, 10);
+      var ok = picked === item.a;
+      if(ok) qScore++;
+
+      Array.prototype.forEach.call(buttons, function(x, i){
+        x.disabled = true;
+        if(i === item.a) x.classList.add("correct");
+        else if(i === picked) x.classList.add("wrong");
+      });
+
+      var ans = document.getElementById("answer");
+      ans.hidden = false;
+      ans.innerHTML = '<span class="verdict ' + (ok ? "ok" : "ng") + '">' +
+                      (ok ? "正解！" : "残念、正解は「" + item.c[item.a] + "」") + '</span>' +
+                      item.e +
+                      '<div><button class="qnext" type="button" id="next">' +
+                      (qIndex === QUIZ.length - 1 ? "結果を見る" : "次の問題へ") + '</button></div>';
+      document.getElementById("next").addEventListener("click", function(){
+        qIndex++; renderQuiz();
+      });
+      document.getElementById("next").focus();
+    });
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  document.getElementById("version").textContent = "v" + APP_VERSION;
+  initSwitch();
+  initCalc();
+  buildFlow();
+  renderQuiz();
+});
+</script>
+</body>
+</html>

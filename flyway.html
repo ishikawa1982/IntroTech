@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flywayのしくみ — データベースの形を、みんなでそろえる</title>
+<meta name="description" content="Flyway（データベースマイグレーションツール）を、たとえ話・図解・クイズでたどるやさしい解説ページ。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="topbar">
+  <span class="logo">Flywayのしくみ</span>
+  <span class="ver" id="version">v1.0.0</span>
+  <a class="home" href="index.html">← 用語集トップ</a>
+</header>
+
+<main>
+
+<div class="hero" id="basic">
+  <h1>データベースだけ、<br><span class="mark">やり直しがきかない</span>。</h1>
+  <p>プログラムを書きまちがえても、ひとつ前に戻せばいい。でも、テーブルに列を1本足したら、その列は誰かのデータベースに残り続ける。開発用・テスト用・本番用、どれも形がそろっていないと動かないのに、そろっている保証はどこにもない。そこを引き受けるのが <strong>Flyway</strong>。</p>
+
+  <div class="chain">
+    <p class="chain-title">列を1本足すときの、いつもの手順——</p>
+    <ol>
+      <li>
+        <span class="node now">SQLを1枚書く<small>いま</small></span>
+        <span class="say">V2__add_email.sql という名前で保存する</span>
+      </li>
+      <li class="arrowline">プログラムと一緒に置く</li>
+      <li>
+        <span class="node">保管庫に入れる<small>コードと同じ場所</small></span>
+        <span class="say">レビューも履歴も、プログラムとまったく同じ扱い</span>
+      </li>
+      <li class="arrowline">起動時やデプロイ時に</li>
+      <li>
+        <span class="node robot">Flywayが走る<small>自動</small></span>
+        <span class="say">「このDBは、どこまで当ててあったっけ？」を確認する</span>
+      </li>
+      <li class="arrowline">足りないぶんだけ</li>
+      <li>
+        <span class="node goal">形がそろう<small>どの環境も</small></span>
+        <span class="say">開発機も、検証機も、本番も、同じ手順を通った状態になる</span>
+      </li>
+    </ol>
+  </div>
+  <p class="lead" style="margin-bottom:0">やっていることは「<span class="pen">どこまで流したかを、DB自身に覚えさせる</span>」だけ。これが今日のいちばん大事なところ。</p>
+</div>
+
+<section id="why">
+  <h2>なんで、こんな道具が必要なの？</h2>
+  <p class="lead">答えはシンプル。<span class="mark pink">人間は、流したかどうかを覚えていられないから。</span></p>
+
+  <div class="notes">
+    <div class="note">
+      <h3>自分のDBだけ、直してしまう</h3>
+      <p>新しい機能を作るとき、まず自分のパソコンのデータベースに列を足す。動いた。うれしい。……そして、その列は自分のところにしかない。</p>
+      <p class="eg">テスト用や本番のデータベースには、まだ列がない。動くのは自分だけ、という状態ができあがる。</p>
+    </div>
+
+    <div class="note">
+      <h3>手順書と、現物がずれる</h3>
+      <p>「リリース時にこのSQLを流してください」とメモを残す。半年後、そのSQLが流れたのかどうか、誰も確信を持って答えられない。</p>
+      <p class="eg">結局、本番のテーブルを直接のぞいて「列があるかどうか」で判断することになる。これを毎回やるのはつらい。</p>
+    </div>
+
+    <div class="note">
+      <h3>だから、DB自身に記録させる</h3>
+      <p>Flywayは、データベースの中に履歴用のテーブルを1つ作る。どのファイルを、いつ、成功したかどうか、そこに書き込んでいく。</p>
+      <p class="eg">「どこまで進んだか」の答えを、人の記憶やWikiではなく、そのデータベース自身が持つ。これが発想の全部。</p>
+    </div>
+  </div>
+</section>
+
+<section id="compare">
+  <h2>そろっている状態と、そうでない状態</h2>
+  <p class="lead">ボタンで切りかえて、3つの環境を見くらべてみよう。</p>
+
+  <div class="board">
+    <div class="switch">
+      <button type="button" id="btn-hand" aria-pressed="true">手で流すと</button>
+      <button type="button" id="btn-fw" aria-pressed="false">Flywayで流すと</button>
+    </div>
+    <p class="tally" id="tally">形がそろっている環境　<b>0</b> / 3</p>
+    <figure style="margin:0">
+      <svg viewBox="0 0 600 260" role="img" aria-label="手で流した場合は3つの環境でテーブルの形がばらばらになり、Flywayを使うと同じ形にそろうことを示す図">
+        <g font-family="'Zen Maru Gothic',sans-serif">
+          <g id="fw-hand">
+            <text x="300" y="26" text-anchor="middle" font-size="15" font-weight="700" fill="#E4453A">どこまで流したか、誰も分からない</text>
+            <g>
+              <rect x="30" y="52" width="160" height="150" rx="12" fill="#fff" stroke="#16263F" stroke-width="2"/>
+              <line x1="30" y1="80" x2="190" y2="80" stroke="#16263F" stroke-width="2"/>
+              <text x="110" y="72" text-anchor="middle" font-size="13" font-weight="700" fill="#16263F">users</text>
+              <g fill="#AEE6A6" stroke="#16263F" stroke-width="1.5">
+                <rect x="46" y="92" width="128" height="16" rx="4"/>
+                <rect x="46" y="114" width="128" height="16" rx="4"/>
+                <rect x="46" y="136" width="128" height="16" rx="4"/>
+                <rect x="46" y="158" width="128" height="16" rx="4"/>
+                <rect x="46" y="180" width="128" height="16" rx="4"/>
+              </g>
+              <text x="110" y="222" text-anchor="middle" font-size="13" fill="#16263F">開発機（5列）</text>
+            </g>
+            <g>
+              <rect x="220" y="52" width="160" height="150" rx="12" fill="#fff" stroke="#16263F" stroke-width="2"/>
+              <line x1="220" y1="80" x2="380" y2="80" stroke="#16263F" stroke-width="2"/>
+              <text x="300" y="72" text-anchor="middle" font-size="13" font-weight="700" fill="#16263F">users</text>
+              <g fill="#AEE6A6" stroke="#16263F" stroke-width="1.5">
+                <rect x="236" y="92" width="128" height="16" rx="4"/>
+                <rect x="236" y="114" width="128" height="16" rx="4"/>
+                <rect x="236" y="136" width="128" height="16" rx="4"/>
+              </g>
+              <text x="300" y="170" text-anchor="middle" font-size="26" fill="#E4453A">?</text>
+              <text x="300" y="222" text-anchor="middle" font-size="13" fill="#16263F">検証機（3列）</text>
+            </g>
+            <g>
+              <rect x="410" y="52" width="160" height="150" rx="12" fill="#fff" stroke="#16263F" stroke-width="2"/>
+              <line x1="410" y1="80" x2="570" y2="80" stroke="#16263F" stroke-width="2"/>
+              <text x="490" y="72" text-anchor="middle" font-size="13" font-weight="700" fill="#16263F">users</text>
+              <g fill="#AEE6A6" stroke="#16263F" stroke-width="1.5">
+                <rect x="426" y="92" width="128" height="16" rx="4"/>
+                <rect x="426" y="114" width="128" height="16" rx="4"/>
+                <rect x="426" y="136" width="128" height="16" rx="4"/>
+                <rect x="426" y="158" width="128" height="16" rx="4"/>
+              </g>
+              <text x="490" y="192" text-anchor="middle" font-size="26" fill="#E4453A">?</text>
+              <text x="490" y="222" text-anchor="middle" font-size="13" fill="#16263F">本番（4列）</text>
+            </g>
+            <text x="300" y="248" text-anchor="middle" font-size="13" fill="#54677E" font-family="'Zen Kaku Gothic New',sans-serif">「本番だけ動かない」の正体は、たいていこれ</text>
+          </g>
+
+          <g id="fw-auto" class="hidden">
+            <g font-size="12" font-family="'Zen Kaku Gothic New',sans-serif">
+              <rect x="170" y="12" width="86" height="24" rx="6" fill="#FFE066" stroke="#16263F" stroke-width="2"/>
+              <text x="213" y="29" text-anchor="middle" fill="#16263F">V1__init</text>
+              <rect x="262" y="12" width="86" height="24" rx="6" fill="#FFE066" stroke="#16263F" stroke-width="2"/>
+              <text x="305" y="29" text-anchor="middle" fill="#16263F">V2__email</text>
+              <rect x="354" y="12" width="86" height="24" rx="6" fill="#FFE066" stroke="#16263F" stroke-width="2"/>
+              <text x="397" y="29" text-anchor="middle" fill="#16263F">V3__index</text>
+            </g>
+            <g stroke="#54677E" stroke-width="2" fill="none">
+              <path d="M213 40 Q160 48 110 58"/>
+              <path d="M305 40 L300 58"/>
+              <path d="M397 40 Q450 48 490 58"/>
+            </g>
+            <g>
+              <rect x="30" y="62" width="160" height="140" rx="12" fill="#fff" stroke="#16263F" stroke-width="2"/>
+              <line x1="30" y1="90" x2="190" y2="90" stroke="#16263F" stroke-width="2"/>
+              <text x="110" y="82" text-anchor="middle" font-size="13" font-weight="700" fill="#16263F">users</text>
+              <g fill="#AEE6A6" stroke="#16263F" stroke-width="1.5">
+                <rect x="46" y="102" width="128" height="16" rx="4"/>
+                <rect x="46" y="124" width="128" height="16" rx="4"/>
+                <rect x="46" y="146" width="128" height="16" rx="4"/>
+                <rect x="46" y="168" width="128" height="16" rx="4"/>
+              </g>
+              <text x="110" y="222" text-anchor="middle" font-size="13" fill="#16263F">開発機　v3</text>
+            </g>
+            <g>
+              <rect x="220" y="62" width="160" height="140" rx="12" fill="#fff" stroke="#16263F" stroke-width="2"/>
+              <line x1="220" y1="90" x2="380" y2="90" stroke="#16263F" stroke-width="2"/>
+              <text x="300" y="82" text-anchor="middle" font-size="13" font-weight="700" fill="#16263F">users</text>
+              <g fill="#AEE6A6" stroke="#16263F" stroke-width="1.5">
+                <rect x="236" y="102" width="128" height="16" rx="4"/>
+                <rect x="236" y="124" width="128" height="16" rx="4"/>
+                <rect x="236" y="146" width="128" height="16" rx="4"/>
+                <rect x="236" y="168" width="128" height="16" rx="4"/>
+              </g>
+              <text x="300" y="222" text-anchor="middle" font-size="13" fill="#16263F">検証機　v3</text>
+            </g>
+            <g>
+              <rect x="410" y="62" width="160" height="140" rx="12" fill="#fff" stroke="#16263F" stroke-width="2"/>
+              <line x1="410" y1="90" x2="570" y2="90" stroke="#16263F" stroke-width="2"/>
+              <text x="490" y="82" text-anchor="middle" font-size="13" font-weight="700" fill="#16263F">users</text>
+              <g fill="#AEE6A6" stroke="#16263F" stroke-width="1.5">
+                <rect x="426" y="102" width="128" height="16" rx="4"/>
+                <rect x="426" y="124" width="128" height="16" rx="4"/>
+                <rect x="426" y="146" width="128" height="16" rx="4"/>
+                <rect x="426" y="168" width="128" height="16" rx="4"/>
+              </g>
+              <text x="490" y="222" text-anchor="middle" font-size="13" fill="#16263F">本番　v3</text>
+            </g>
+            <text x="300" y="248" text-anchor="middle" font-size="13" fill="#1E8A4C" font-family="'Zen Kaku Gothic New',sans-serif" font-weight="700">同じファイルが、同じ順番で通っている</text>
+          </g>
+        </g>
+      </svg>
+      <figcaption>Flywayは魔法で形をそろえるわけではありません。「同じSQLを、同じ順番で、まだ当てていない環境にだけ流す」を機械的にやっているだけです。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="calc">
+  <h2>手で流すと、何回の作業になる？</h2>
+  <p class="lead">環境の数と、1年ぶんの変更回数を選んでみよう。</p>
+  <div class="calcbox">
+    <div class="calcrow">
+      <div>
+        <label for="envs">環境の数</label>
+        <select id="envs"></select>
+      </div>
+      <div>
+        <label for="changes">1年のスキーマ変更</label>
+        <select id="changes"></select>
+      </div>
+    </div>
+    <div class="result" id="calc-result"></div>
+  </div>
+</section>
+
+<section id="run">
+  <h2>1回走るときに、やっていること</h2>
+  <p class="lead">中身は意外と素朴です。<span class="pen">タップして開いてみよう。</span></p>
+
+  <div class="tree">
+    <h3>flyway migrate の5ステップ</h3>
+    <div class="step-list" id="tree-run"></div>
+  </div>
+</section>
+
+<section id="rules">
+  <h2>おぼえることは、3つだけ</h2>
+  <p class="lead">ここさえ押さえれば、あとは調べながらで足ります。</p>
+  <div class="notes">
+    <div class="note">
+      <h3>ファイル名が、すべてを決める</h3>
+      <p><code>V2__add_email.sql</code> の <strong>V</strong> は versioned（1回だけ流す）、<strong>2</strong> がバージョン、アンダースコア2本が区切り、その後ろは人間用の説明。</p>
+      <p class="eg">ほかに <code>R__</code>（repeatable：中身が変わるたび毎回流し直す。ビューや関数向け）があります。番号順に、上から順に実行されます。</p>
+    </div>
+    <div class="note">
+      <h3>一度当てたファイルは、書きかえない</h3>
+      <p>Flywayは実行したファイルの中身のハッシュ（チェックサム）を履歴に残しています。あとから中身を1文字でも直すと、次回に食い違いを検知してエラーで止まります。</p>
+      <p class="eg">直したいときは、新しい番号のファイルを足す。「過去は変えない、先に進む」が原則です。</p>
+    </div>
+    <div class="note">
+      <h3>途中から入れることもできる</h3>
+      <p>すでに動いているデータベースに後から導入する場合は <code>baseline</code>。「今のこの状態を、バージョンXということにする」と宣言して、そこから先だけ管理します。</p>
+      <p class="eg">履歴が壊れたときの <code>repair</code>、状況を見る <code>info</code>、当てる <code>migrate</code>。日常で使うのは、だいたいこの4つです。</p>
+    </div>
+  </div>
+</section>
+
+<section id="quiz">
+  <h2>クイズ：きみは何問わかる？</h2>
+  <p class="lead">全5問。まちがえても大丈夫、答えのほうが面白い。</p>
+  <div class="quiz" id="quiz"></div>
+</section>
+
+<section id="careful">
+  <h2>気をつけないと、痛い目にあう</h2>
+  <p class="lead">データベースは、やり直しがきかない場所です。</p>
+  <ol class="steps">
+    <li><b><code>clean</code> は本番で絶対に実行しない。</b>設定したスキーマの中身を全部消すコマンドです。本番の接続情報で走らせたら終わりなので、設定で禁止しておきます。</li>
+    <li><b>当てたファイルは、書きかえない。</b>チェックサムが合わずに止まります。止まってくれるのは親切な設計なので、無理に黙らせず、新しいファイルで直します。</li>
+    <li><b>番号の取り合いに気をつける。</b>2人が同時に <code>V5__</code> を作ると衝突します。日時を番号にする（<code>V20260906__</code>）のが定番の逃げ方です。</li>
+    <li><b>大きなテーブルの変更は、止まる。</b>何百万行もあるテーブルへのALTERは、その間ロックがかかります。Flywayの問題ではなく、SQLの問題として別に考えます。</li>
+    <li><b>戻す手段は、基本ない。</b>「前のバージョンに戻す」機能は有償版の機能です。無償版で使うなら、戻すためのSQLも前に進む形で書く前提にします。</li>
+    <li><b>接続情報を直書きしない。</b>設定ファイルをそのまま保管庫に入れると、パスワードが一緒に入ります。環境変数などに逃がします。</li>
+  </ol>
+</section>
+
+<section id="words">
+  <h2>ことばのミニ辞典</h2>
+  <p class="lead">この先どこかで見かけたときのために。</p>
+  <dl class="words">
+    <dt>マイグレーション</dt>
+    <dd>データベースの形を1段階進めるための変更。またはその変更を書いたSQLファイル1枚のこと。</dd>
+    <dt>履歴テーブル</dt>
+    <dd>Flywayがデータベースの中に作る管理用のテーブル（<code>flyway_schema_history</code>）。どのファイルをいつ当てたかが記録される。</dd>
+    <dt>チェックサム</dt>
+    <dd>ファイルの中身から計算した短い値。前回と一致するかを見て、当てたあとに書きかえられていないかを判定する。</dd>
+    <dt>baseline</dt>
+    <dd>すでに存在するデータベースを「ここが出発点」と宣言する操作。途中から導入するときに使う。</dd>
+    <dt>repeatable マイグレーション</dt>
+    <dd><code>R__</code> で始まるファイル。中身が変わるたびに流し直される。ビューやストアドプロシージャの定義に向く。</dd>
+    <dt>冪等（べきとう）</dt>
+    <dd>何回実行しても同じ結果になる性質。マイグレーションを書くときに意識しておくと、事故が減る。</dd>
+  </dl>
+</section>
+
+<section class="sibling">
+  <h2>ほかの解説ページ</h2>
+  <ul>
+    <li><a href="mcp.html"><b>MCPのしくみ</b><span>AIは、外の道具を借りて動いている。</span></a></li>
+    <li><a href="cicd.html"><b>CI/CDのしくみ</b><span>直したものを、こわがらずに届けるために。</span></a></li>
+    <li><a href="websocket.html"><b>WebSocketのしくみ</b><span>「まだ？」と聞きに行かなくてよくなった日。</span></a></li>
+    <li><a href="getdown.html"><b>Getdownのしくみ</b><span>配ったあとに、直せるようにする。</span></a></li>
+    <li><a href="angular.html"><b>Angularのしくみ</b><span>画面を、部品に切り分ける。</span></a></li>
+    <li><a href="bigip.html"><b>BIG-IPのしくみ</b><span>入口を1つにして、裏を何台にでも。</span></a></li>
+    <li><a href="spring.html"><b>Springのしくみ</b><span>部品の組み立てを、任せてしまう。</span></a></li>
+    <li><a href="docker.html"><b>Dockerのしくみ</b><span>「私のPCでは動く」を、なくすために。</span></a></li>
+    <li><a href="kubernetes.html"><b>Kubernetesのしくみ</b><span>落ちたら、勝手に起き上がる。</span></a></li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <p>Flyway を、たとえ話・図解・クイズでたどるやさしい解説ページです。コマンドの細かいオプションは、公式ドキュメントをどうぞ。</p>
+  <p class="footver">Flywayのしくみ　v1.0.0</p>
+</footer>
+
+</div>
+
+<script>
+"use strict";
+var APP_VERSION = "1.0.0";
+
+function initSwitch(){
+  var hand = document.getElementById("fw-hand");
+  var auto = document.getElementById("fw-auto");
+  var hBtn = document.getElementById("btn-hand");
+  var aBtn = document.getElementById("btn-fw");
+  var tally = document.getElementById("tally");
+  if(!hand || !auto) return;
+
+  function show(isHand){
+    hand.classList.toggle("hidden", !isHand);
+    auto.classList.toggle("hidden", isHand);
+    hBtn.setAttribute("aria-pressed", isHand ? "true" : "false");
+    aBtn.setAttribute("aria-pressed", isHand ? "false" : "true");
+    tally.innerHTML = isHand
+      ? '形がそろっている環境　<b>0</b> / 3'
+      : '形がそろっている環境　<b>3</b> / 3';
+  }
+  hBtn.addEventListener("click", function(){ show(true); });
+  aBtn.addEventListener("click", function(){ show(false); });
+}
+
+function initCalc(){
+  var e = document.getElementById("envs");
+  var c = document.getElementById("changes");
+  var res = document.getElementById("calc-result");
+  if(!e || !c || !res) return;
+
+  [2,3,4,5,6,8,10].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v + "個";
+    if(v === 3) o.selected = true;
+    e.appendChild(o);
+  });
+  [6,12,24,36,60,120].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v + "回";
+    if(v === 24) o.selected = true;
+    c.appendChild(o);
+  });
+
+  function update(){
+    var envs = parseInt(e.value, 10);
+    var chg = parseInt(c.value, 10);
+    var manual = envs * chg;
+    var auto = envs;
+    var max = Math.max(manual, 1);
+
+    var html = '<p class="rline">手で流すと、1年で <strong>' + manual +
+               '回</strong> のSQL実行。しかも毎回「これ、もう流したっけ？」の確認がついてきます。' +
+               'Flywayなら、実行はデプロイの一部になるので、人が意識するのは <strong>0回</strong> です。</p>';
+
+    html += '<div class="bars">';
+    html += '<div><p class="bar-label">手作業　' + envs + '環境 × ' + chg + '回</p>' +
+            '<div class="bar"><span style="width:100%"></span></div></div>';
+    html += '<div><p class="bar-label">Flyway　仕込むのは最初の ' + auto + ' 環境ぶんだけ</p>' +
+            '<div class="bar good"><span style="width:' + Math.max(auto / max * 100, 2) + '%"></span></div></div>';
+    html += '</div>';
+
+    html += '<p class="rline" style="margin:0">' +
+            (manual >= 100
+              ? 'この回数を人が数えるのは無理です。1回でも取りこぼすと、その環境だけ形がずれます。'
+              : '回数が少なくても、取りこぼしは起きます。効くのは時間より「確実さ」のほうです。') +
+            '</p>';
+    res.innerHTML = html;
+  }
+
+  e.addEventListener("change", update);
+  c.addEventListener("change", update);
+  update();
+}
+
+var RUN = [
+  {y:"①", n:"履歴テーブルを確認する", t:"どこまで当てたかを知る手がかりが、<b>どこにもない</b>。", f:"データベースの中の履歴テーブルを読む。まだ無ければ、このとき自動で作る。"},
+  {y:"②", n:"SQLファイルを集めて並べる", t:"ファイルが増えると、どれを先に流すべきか<b>人が判断できなくなる</b>。", f:"決められた場所からファイルを読み、名前に書かれたバージョン番号の順に並べる。"},
+  {y:"③", n:"当てたものと突き合わせる", t:"同じSQLを2回流すと、<b>エラーになるか、二重に登録される</b>。", f:"履歴に記録されているものと照合し、まだ当てていないものだけを選ぶ。ついでにチェックサムも確認する。"},
+  {y:"④", n:"足りないぶんを順に実行する", t:"順番を入れかえると、存在しない列を参照して<b>途中で失敗する</b>。", f:"番号の若いものから順に実行する。途中で失敗したら、そこで止めて残りは流さない。"},
+  {y:"⑤", n:"結果を履歴に書く", t:"実行できても記録しなければ、<b>次回また同じものを流してしまう</b>。", f:"どのファイルを、いつ、何秒かけて、成功したかを履歴テーブルに追記する。次回はここが出発点になる。"}
+];
+
+function buildRun(){
+  var host = document.getElementById("tree-run");
+  if(!host) return;
+  RUN.forEach(function(s, i){
+    var wrap = document.createElement("div");
+    wrap.className = "step";
+    wrap.setAttribute("aria-expanded","false");
+    var btnId = "run-btn-" + i, panId = "run-pan-" + i;
+
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.id = btnId;
+    btn.setAttribute("aria-controls", panId);
+    btn.setAttribute("aria-expanded","false");
+    btn.innerHTML = '<span class="yr">' + s.y + '</span><span class="nm">' + s.n +
+                    '</span><span class="plus" aria-hidden="true"></span>';
+
+    var pan = document.createElement("div");
+    pan.className = "detail"; pan.id = panId; pan.hidden = true;
+    pan.setAttribute("role","region");
+    pan.setAttribute("aria-labelledby", btnId);
+    pan.innerHTML = '<p class="trouble">😖 これがないと：' + s.t + '</p>' +
+                    '<p class="fix">💡 やっていること：' + s.f + '</p>';
+
+    btn.addEventListener("click", function(){
+      var open = pan.hidden;
+      pan.hidden = !open;
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      wrap.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    wrap.appendChild(btn); wrap.appendChild(pan); host.appendChild(wrap);
+  });
+}
+
+var QUIZ = [
+  {
+    q:"Flywayは「どこまで当てたか」を、どこに覚えている？",
+    c:["設定ファイル","データベースの中の履歴テーブル","Wikiのページ","担当者の記憶"],
+    a:1,
+    e:"データベース自身の中に履歴テーブルを作り、そこに記録します。だから、どのデータベースに聞いても正しい答えが返ってくる。これがFlywayの核心です。"
+  },
+  {
+    q:"一度流したSQLファイルを、あとから書きかえるとどうなる？",
+    c:["何も起きない","次回のマイグレーションがエラーで止まる","自動で流し直される","前の内容に戻る"],
+    a:1,
+    e:"実行時に計算したチェックサムが履歴に残っています。中身が変わると食い違いを検知して止まります。直したいときは、新しい番号のファイルを足します。"
+  },
+  {
+    q:"<code>V2__add_email.sql</code> の「V」は何の意味？",
+    c:["Version（1回だけ流す）","Very important","Validate","Void"],
+    a:0,
+    e:"versioned migration、つまり「1回だけ流すもの」の印です。何度でも流し直すものは R__ で始めます。アンダースコア2本が、番号と説明の区切りです。"
+  },
+  {
+    q:"すでに運用中のデータベースに、後からFlywayを入れるときは？",
+    c:["いったん全部消して作り直す","baseline で出発点を宣言する","手で履歴テーブルを書く","導入できない"],
+    a:1,
+    e:"baseline を使うと「今のこの状態をバージョンXとする」と宣言できます。過去の経緯は管理対象外にして、そこから先だけをきちんと積み上げていきます。"
+  },
+  {
+    q:"本番のデータベースに対して、絶対に実行してはいけないのは？",
+    c:["info","migrate","clean","validate"],
+    a:2,
+    e:"clean は、設定したスキーマの中身を全部消すコマンドです。開発中にまっさらへ戻す用途のもの。本番では設定で実行できないようにしておきます。"
+  }
+];
+
+var qIndex = 0, qScore = 0;
+
+function renderQuiz(){
+  var host = document.getElementById("quiz");
+  if(!host) return;
+
+  if(qIndex >= QUIZ.length){
+    var msg = qScore === 5 ? "全問正解。もう人に説明できるレベル。"
+            : qScore >= 3 ? "いい線いってる。まちがえた問題ほど、覚えて帰れる。"
+            : "ここからが面白いところ。上の5ステップをもう一度ひらいてみよう。";
+    host.innerHTML = '<p class="score">結果：' + qScore + ' / ' + QUIZ.length + ' 問正解</p>' +
+                     '<p style="margin:0 0 14px">' + msg + '</p>' +
+                     '<button class="qnext" type="button" id="again">もう一度やる</button>';
+    document.getElementById("again").addEventListener("click", function(){
+      qIndex = 0; qScore = 0; renderQuiz();
+    });
+    return;
+  }
+
+  var item = QUIZ[qIndex];
+  var html = '<div class="qhead"><span class="qcount">第' + (qIndex+1) + '問 / ' + QUIZ.length + '問</span></div>' +
+             '<p class="qtext">' + item.q + '</p><div class="choices">';
+  item.c.forEach(function(text, i){
+    html += '<button class="choice" type="button" data-i="' + i + '">' + text + '</button>';
+  });
+  html += '</div><div class="answer" id="answer" hidden></div>';
+  host.innerHTML = html;
+
+  var buttons = host.querySelectorAll(".choice");
+  Array.prototype.forEach.call(buttons, function(b){
+    b.addEventListener("click", function(){
+      var picked = parseInt(b.dataset.i, 10);
+      var ok = picked === item.a;
+      if(ok) qScore++;
+
+      Array.prototype.forEach.call(buttons, function(x, i){
+        x.disabled = true;
+        if(i === item.a) x.classList.add("correct");
+        else if(i === picked) x.classList.add("wrong");
+      });
+
+      var ans = document.getElementById("answer");
+      ans.hidden = false;
+      ans.innerHTML = '<span class="verdict ' + (ok ? "ok" : "ng") + '">' +
+                      (ok ? "正解！" : "残念、正解は「" + item.c[item.a].replace(/<[^>]+>/g,"") + "」") + '</span>' +
+                      item.e +
+                      '<div><button class="qnext" type="button" id="next">' +
+                      (qIndex === QUIZ.length - 1 ? "結果を見る" : "次の問題へ") + '</button></div>';
+      document.getElementById("next").addEventListener("click", function(){
+        qIndex++; renderQuiz();
+      });
+      document.getElementById("next").focus();
+    });
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  document.getElementById("version").textContent = "v" + APP_VERSION;
+  initSwitch();
+  initCalc();
+  buildRun();
+  renderQuiz();
+});
+</script>
+</body>
+</html>

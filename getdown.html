@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Getdownのしくみ — 配ったあとのアプリを、勝手に最新にする</title>
+<meta name="description" content="Getdown（Javaアプリの自動更新ランチャー）を、たとえ話・図解・クイズでたどるやさしい解説ページ。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="topbar">
+  <span class="logo">Getdownのしくみ</span>
+  <span class="ver" id="version">v1.0.0</span>
+  <a class="home" href="index.html">← 用語集トップ</a>
+</header>
+
+<main>
+
+<div class="hero" id="basic">
+  <h1>配ったあとに、<br><span class="mark">直せる</span>ようにする。</h1>
+  <p>お店のパソコン200台に入れたアプリに、バグが見つかった。直したものを届けるために、200台ぶん出張する？ それとも、アプリ自身に取りに行かせる？ <strong>Getdown</strong> は後者を引き受ける、小さな門番です。本体より先に起動して、変わったファイルだけ取ってきてから、本体を立ち上げます。</p>
+
+  <div class="chain">
+    <p class="chain-title">アイコンをダブルクリックしてから、画面が出るまで——</p>
+    <ol>
+      <li>
+        <span class="node now">ダブルクリック<small>いま</small></span>
+        <span class="say">利用者は、いつもどおりアイコンを押しただけ</span>
+      </li>
+      <li class="arrowline">最初に動くのは本体ではない</li>
+      <li>
+        <span class="node robot">ランチャー<small>小さな門番</small></span>
+        <span class="say">Getdown本体。数百KBの、ただの小さなプログラム</span>
+      </li>
+      <li class="arrowline">サーバーを見に行く</li>
+      <li>
+        <span class="node">見くらべる<small>ハッシュで照合</small></span>
+        <span class="say">手元のファイルと、置いてある一覧を1つずつ比べる</span>
+      </li>
+      <li class="arrowline">ちがうものだけ落とす</li>
+      <li>
+        <span class="node goal">本体が起動<small>いつも最新</small></span>
+        <span class="say">更新が終わってから、アプリの画面が開く</span>
+      </li>
+    </ol>
+  </div>
+  <p class="lead" style="margin-bottom:0">やっていることは「<span class="pen">起動前に、差分だけ入れ替える</span>」。これが今日のいちばん大事なところ。</p>
+</div>
+
+<section id="why">
+  <h2>なんで、こんなものが要るの？</h2>
+  <p class="lead">答えはシンプル。<span class="mark pink">デスクトップアプリは、配ったら終わりだから。</span></p>
+
+  <div class="notes">
+    <div class="note">
+      <h3>Webサイトなら、悩まなくていい</h3>
+      <p>Webサイトの直しは簡単です。サーバーのファイルを差し替えれば、次に見た人はもう新しいものを見ている。利用者は何もしなくていい。</p>
+      <p class="eg">ところがパソコンに入れるアプリは、利用者の手元にコピーが残ります。サーバーを直しても、手元のものは古いままです。</p>
+    </div>
+
+    <div class="note">
+      <h3>「更新してください」は、届かない</h3>
+      <p>お知らせを出しても、全員が読んで、全員が入れ直してくれることはありません。結果として、新旧のバージョンが同時に動く状態が生まれます。</p>
+      <p class="eg">サーバー側と噛み合わない古いアプリが1台でも残ると、問い合わせの原因になります。数が多いほど、原因の切り分けも難しくなります。</p>
+    </div>
+
+    <div class="note">
+      <h3>ブラウザから起動する道は、閉じた</h3>
+      <p>かつては Java Web Start という、ブラウザのリンクからアプリを起動して自動更新する仕組みがありました。今はもう使えません。</p>
+      <p class="eg">その置きかえとして残ったのが、Getdownのようなランチャー方式です。ブラウザに頼らず、アプリ自身が更新を取りに行きます。</p>
+    </div>
+  </div>
+</section>
+
+<section id="compare">
+  <h2>毎回どれだけ落とす？</h2>
+  <p class="lead">ボタンで切りかえて、ダウンロードの量を見くらべてみよう。</p>
+
+  <div class="board">
+    <div class="switch">
+      <button type="button" id="btn-full" aria-pressed="true">全部入れ直す</button>
+      <button type="button" id="btn-diff" aria-pressed="false">変わったぶんだけ</button>
+    </div>
+    <p class="tally" id="tally">1台あたりのダウンロード　<b>80</b> MB</p>
+    <figure style="margin:0">
+      <svg viewBox="0 0 600 250" role="img" aria-label="全ファイルを毎回ダウンロードする場合と、変わったファイルだけをダウンロードする場合の比較図">
+        <g font-family="'Zen Maru Gothic',sans-serif">
+          <rect x="20" y="16" width="150" height="36" rx="10" fill="#FFE066" stroke="#16263F" stroke-width="2"/>
+          <text x="95" y="40" text-anchor="middle" font-size="14" font-weight="700" fill="#16263F">サーバー</text>
+          <rect x="430" y="16" width="150" height="36" rx="10" fill="#9BDDF3" stroke="#16263F" stroke-width="2"/>
+          <text x="505" y="40" text-anchor="middle" font-size="14" font-weight="700" fill="#16263F">手元のPC</text>
+
+          <g font-family="'Zen Kaku Gothic New',sans-serif" font-size="12.5">
+            <g id="gd-full">
+              <g stroke="#E4453A" stroke-width="3" stroke-linecap="round">
+                <line x1="175" y1="80" x2="425" y2="80"/>
+                <line x1="175" y1="112" x2="425" y2="112"/>
+                <line x1="175" y1="144" x2="425" y2="144"/>
+                <line x1="175" y1="176" x2="425" y2="176"/>
+                <line x1="175" y1="208" x2="425" y2="208"/>
+              </g>
+              <g fill="#16263F">
+                <text x="300" y="74" text-anchor="middle">app.jar　42MB</text>
+                <text x="300" y="106" text-anchor="middle">lib-ui.jar　18MB</text>
+                <text x="300" y="138" text-anchor="middle">lib-db.jar　12MB</text>
+                <text x="300" y="170" text-anchor="middle">images.zip　6MB</text>
+                <text x="300" y="202" text-anchor="middle">config.dat　2MB</text>
+              </g>
+              <text x="300" y="234" text-anchor="middle" font-family="'Zen Maru Gothic',sans-serif" font-size="14" font-weight="700" fill="#E4453A">直したのは1か所でも、全部落とし直す</text>
+            </g>
+
+            <g id="gd-diff" class="hidden">
+              <g stroke="#C3D2DE" stroke-width="2" stroke-dasharray="6 5">
+                <line x1="175" y1="80" x2="425" y2="80"/>
+                <line x1="175" y1="144" x2="425" y2="144"/>
+                <line x1="175" y1="176" x2="425" y2="176"/>
+                <line x1="175" y1="208" x2="425" y2="208"/>
+              </g>
+              <line x1="175" y1="112" x2="425" y2="112" stroke="#E4453A" stroke-width="4" stroke-linecap="round"/>
+              <g fill="#8A9AA8">
+                <text x="300" y="74" text-anchor="middle">app.jar　✓ 同じ</text>
+                <text x="300" y="138" text-anchor="middle">lib-db.jar　✓ 同じ</text>
+                <text x="300" y="170" text-anchor="middle">images.zip　✓ 同じ</text>
+                <text x="300" y="202" text-anchor="middle">config.dat　✓ 同じ</text>
+              </g>
+              <text x="300" y="106" text-anchor="middle" fill="#E4453A" font-weight="700">lib-ui.jar　18MB ← これだけ</text>
+              <text x="300" y="234" text-anchor="middle" font-family="'Zen Maru Gothic',sans-serif" font-size="14" font-weight="700" fill="#1E8A4C">ハッシュを見くらべて、ちがう1本だけ落とす</text>
+            </g>
+          </g>
+        </g>
+      </svg>
+      <figcaption>点線が「落とさなかったファイル」。手元のファイルのハッシュと、サーバーの一覧に書かれたハッシュを突き合わせ、一致するものは触りません。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="calc">
+  <h2>台数が増えると、どうなる？</h2>
+  <p class="lead">アプリの大きさと台数を選ぶと、1回の更新で流れる通信量を計算します。</p>
+  <div class="calcbox">
+    <div class="calcrow">
+      <div>
+        <label for="size">アプリ全体の大きさ</label>
+        <select id="size"></select>
+      </div>
+      <div>
+        <label for="pcs">配っている台数</label>
+        <select id="pcs"></select>
+      </div>
+    </div>
+    <div class="result" id="calc-result"></div>
+  </div>
+</section>
+
+<section id="life">
+  <h2>起動のたびに、やっていること</h2>
+  <p class="lead">ダブルクリックから画面が出るまでの5つの場面。<span class="pen">タップして開いてみよう。</span></p>
+
+  <div class="tree">
+    <h3>ランチャーの仕事</h3>
+    <div class="step-list" id="tree-life"></div>
+  </div>
+</section>
+
+<section id="files">
+  <h2>登場するファイルは、2つだけ</h2>
+  <p class="lead">仕組みの中心は、この2枚のテキストです。</p>
+  <div class="notes">
+    <div class="note">
+      <h3><code>getdown.txt</code> — 何を、どこから、どう起動するか</h3>
+      <p>人が書く設定ファイル。更新ファイルの置き場所（<code>appbase</code>）、読み込むjarの一覧、起動するクラス名などを並べます。</p>
+      <p class="eg">中身はただのテキスト。ここに書かれたURLを基準に、すべてのファイルの場所が決まります。</p>
+    </div>
+    <div class="note">
+      <h3><code>digest</code> — ファイル一覧とハッシュ</h3>
+      <p>付属のツールが自動で作る一覧表。どのファイルが、どんな中身なのかを、ハッシュ値で書き残しています。手元と見くらべる相手がこれです。</p>
+      <p class="eg">古い方式の <code>digest.txt</code> と、新しいハッシュを使う <code>digest2.txt</code> の2枚が置かれます。今のGetdownは新しいほうを優先して見ます。</p>
+    </div>
+    <div class="note">
+      <h3>サーバーは、ただの置き場でいい</h3>
+      <p>配信側に特別なソフトは要りません。<span class="mark cyan">ファイルを置いた普通のWebサーバー</span>があれば動きます。</p>
+      <p class="eg">インストーラに入れて配るのは、ランチャーと、本物の設定ファイルの場所を書いた入口だけ。アプリ本体は入っていません。</p>
+    </div>
+  </div>
+</section>
+
+<section id="quiz">
+  <h2>クイズ：きみは何問わかる？</h2>
+  <p class="lead">全5問。まちがえても大丈夫、答えのほうが面白い。</p>
+  <div class="quiz" id="quiz"></div>
+</section>
+
+<section id="careful">
+  <h2>気をつけないと、あとで泣く</h2>
+  <p class="lead">「起動のたびに自動で落として実行する」仕組みなので、そこが弱点にもなります。</p>
+  <ol class="steps">
+    <li><b>配信は必ず https に。</b>通信の途中で差し替えられたら、全台にそのまま配られます。自動で実行される仕組みだからこそ、経路の安全は必須です。</li>
+    <li><b>署名を使う。</b>一覧表に署名を付けておけば、置き場が荒らされても、改ざんされたファイルを掴まされずにすみます。</li>
+    <li><b>更新の途中で切れても壊れないように。</b>落とす途中で電源が落ちる、回線が切れる。検証に失敗したものは捨てて、次の起動でやり直す前提にしておきます。</li>
+    <li><b>戻す手順を決めておく。</b>配ったあとに不具合が見つかったら、置き場のファイルを前のものに戻します。「戻したら全台がどうなるか」を先に一度試しておきます。</li>
+    <li><b>Javaそのものの配布は、別問題。</b>Getdownが更新するのはアプリのファイルです。動かすためのJavaをどう配って、どう上げるかは、別に決める必要があります。</li>
+    <li><b>起動時間が伸びることを見込む。</b>毎回サーバーを見に行くので、ネットワークが遅い拠点では起動が遅くなります。オフライン時の挙動も確認しておきます。</li>
+  </ol>
+</section>
+
+<section id="words">
+  <h2>ことばのミニ辞典</h2>
+  <p class="lead">この先どこかで見かけたときのために。</p>
+  <dl class="words">
+    <dt>ランチャー</dt>
+    <dd>本体より先に起動して、準備をしてからアプリを立ち上げる小さなプログラム。Getdownの正体はこれ。</dd>
+    <dt>appbase</dt>
+    <dd>更新ファイルが置いてあるURL。設定に書かれたすべてのファイル名は、この場所を基準に組み立てられる。</dd>
+    <dt>getdown.txt</dt>
+    <dd>人が書く設定ファイル。配布元のURL、読み込むjar、起動するクラスなどを書く。</dd>
+    <dt>digest</dt>
+    <dd>ファイルの一覧とハッシュ値を書いた表。手元と見くらべて、変わったものを見つけるために使う。</dd>
+    <dt>ハッシュ</dt>
+    <dd>ファイルの中身から計算した短い値。中身が1バイトでも違えば別の値になるので、同じかどうかの判定に使える。</dd>
+    <dt>Java Web Start</dt>
+    <dd>かつてブラウザ経由でJavaアプリを起動・更新していた仕組み。廃止されたことが、ランチャー方式が使われる背景になっている。</dd>
+  </dl>
+</section>
+
+<section class="sibling">
+  <h2>ほかの解説ページ</h2>
+  <ul>
+    <li><a href="mcp.html"><b>MCPのしくみ</b><span>AIは、外の道具を借りて動いている。</span></a></li>
+    <li><a href="cicd.html"><b>CI/CDのしくみ</b><span>直したものを、こわがらずに届けるために。</span></a></li>
+    <li><a href="websocket.html"><b>WebSocketのしくみ</b><span>「まだ？」と聞きに行かなくてよくなった日。</span></a></li>
+    <li><a href="flyway.html"><b>Flywayのしくみ</b><span>データベースだけ、やり直しがきかない。</span></a></li>
+    <li><a href="angular.html"><b>Angularのしくみ</b><span>画面を、部品に切り分ける。</span></a></li>
+    <li><a href="bigip.html"><b>BIG-IPのしくみ</b><span>入口を1つにして、裏を何台にでも。</span></a></li>
+    <li><a href="spring.html"><b>Springのしくみ</b><span>部品の組み立てを、任せてしまう。</span></a></li>
+    <li><a href="docker.html"><b>Dockerのしくみ</b><span>「私のPCでは動く」を、なくすために。</span></a></li>
+    <li><a href="kubernetes.html"><b>Kubernetesのしくみ</b><span>落ちたら、勝手に起き上がる。</span></a></li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <p>Getdown を、たとえ話・図解・クイズでたどるやさしい解説ページです。設定項目の詳細は、公式のドキュメントをどうぞ。</p>
+  <p class="footver">Getdownのしくみ　v1.0.0</p>
+</footer>
+
+</div>
+
+<script>
+"use strict";
+var APP_VERSION = "1.0.0";
+
+function initSwitch(){
+  var full = document.getElementById("gd-full");
+  var diff = document.getElementById("gd-diff");
+  var fBtn = document.getElementById("btn-full");
+  var dBtn = document.getElementById("btn-diff");
+  var tally = document.getElementById("tally");
+  if(!full || !diff) return;
+
+  function show(isFull){
+    full.classList.toggle("hidden", !isFull);
+    diff.classList.toggle("hidden", isFull);
+    fBtn.setAttribute("aria-pressed", isFull ? "true" : "false");
+    dBtn.setAttribute("aria-pressed", isFull ? "false" : "true");
+    tally.innerHTML = isFull
+      ? '1台あたりのダウンロード　<b>80</b> MB'
+      : '1台あたりのダウンロード　<b>18</b> MB';
+  }
+  fBtn.addEventListener("click", function(){ show(true); });
+  dBtn.addEventListener("click", function(){ show(false); });
+}
+
+function initCalc(){
+  var sz = document.getElementById("size");
+  var pc = document.getElementById("pcs");
+  var res = document.getElementById("calc-result");
+  if(!sz || !pc) return;
+
+  [20,50,80,150,300,500].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v + "MB";
+    if(v === 80) o.selected = true;
+    sz.appendChild(o);
+  });
+  [10,50,100,200,500,1000,3000].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v.toLocaleString() + "台";
+    if(v === 200) o.selected = true;
+    pc.appendChild(o);
+  });
+
+  function update(){
+    var size = parseInt(sz.value, 10);
+    var pcs = parseInt(pc.value, 10);
+    var ratio = 0.12;                       // 1回の更新で変わるのは、ざっくり1割前後
+    var fullMB = size * pcs;
+    var diffMB = Math.round(size * ratio) * pcs;
+    var max = Math.max(fullMB, 1);
+
+    function gb(mb){
+      return mb >= 1024 ? (mb / 1024).toFixed(1) + " GB" : mb.toLocaleString() + " MB";
+    }
+
+    var html = '<p class="rline">全部入れ直すと、1回の更新で <strong>' + gb(fullMB) +
+               '</strong>。変わったぶんだけなら <strong>' + gb(diffMB) +
+               '</strong>（更新でさわるファイルを、全体の1割ほどと見た場合）。</p>';
+
+    html += '<div class="bars">';
+    html += '<div><p class="bar-label">全部入れ直す　' + size + 'MB × ' + pcs.toLocaleString() + '台</p>' +
+            '<div class="bar"><span style="width:100%"></span></div></div>';
+    html += '<div><p class="bar-label">変わったぶんだけ</p>' +
+            '<div class="bar good"><span style="width:' + Math.max(diffMB / max * 100, 2) + '%"></span></div></div>';
+    html += '</div>';
+
+    html += '<p class="rline" style="margin:0">' +
+            (fullMB >= 20480
+              ? 'この量が、リリースのたびに同じ時間帯へ集中します。回線が細い拠点では、業務が始められません。'
+              : 'まだ耐えられる量ですが、更新が週1回になると話が変わります。差分にしておくと、頻繁に直せるようになります。') +
+            '</p>';
+    res.innerHTML = html;
+  }
+
+  sz.addEventListener("change", update);
+  pc.addEventListener("change", update);
+  update();
+}
+
+var LIFE = [
+  {y:"①", n:"ランチャーが先に起動する", t:"本体が先に起動してしまうと、<b>古いまま動きだして</b>しまう。", f:"アイコンに紐づいているのはアプリ本体ではなく、Getdownのランチャー。更新の判断が終わるまで、本体には手を触れない。"},
+  {y:"②", n:"配布元を見に行く", t:"どこに最新があるのか<b>分からなければ、比べようがない</b>。", f:"設定に書かれたURL（appbase）から、最新の設定と一覧表を取ってくる。ここが唯一の情報源になる。"},
+  {y:"③", n:"手元と見くらべる", t:"ファイルの日付だけで判断すると、<b>中身が同じでも落としてしまう</b>。", f:"一覧表に書かれたハッシュと、手元のファイルのハッシュを1つずつ突き合わせる。一致するものは触らない。"},
+  {y:"④", n:"ちがうものだけ落とす", t:"全部落とし直すと、1行の修正でも<b>数十MBの通信</b>が発生する。", f:"食い違ったファイルだけをダウンロードして置きかえる。落としたものが正しいかを、もう一度ハッシュで確かめる。"},
+  {y:"⑤", n:"本体を起動する", t:"更新に失敗したまま起動すると、<b>中途半端な状態のアプリ</b>が動いてしまう。", f:"すべてそろったことを確認してから、設定に書かれたクラスを実行する。ここで初めて、利用者の画面が開く。"}
+];
+
+function buildLife(){
+  var host = document.getElementById("tree-life");
+  if(!host) return;
+  LIFE.forEach(function(s, i){
+    var wrap = document.createElement("div");
+    wrap.className = "step";
+    wrap.setAttribute("aria-expanded","false");
+    var btnId = "life-btn-" + i, panId = "life-pan-" + i;
+
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.id = btnId;
+    btn.setAttribute("aria-controls", panId);
+    btn.setAttribute("aria-expanded","false");
+    btn.innerHTML = '<span class="yr">' + s.y + '</span><span class="nm">' + s.n +
+                    '</span><span class="plus" aria-hidden="true"></span>';
+
+    var pan = document.createElement("div");
+    pan.className = "detail"; pan.id = panId; pan.hidden = true;
+    pan.setAttribute("role","region");
+    pan.setAttribute("aria-labelledby", btnId);
+    pan.innerHTML = '<p class="trouble">😖 これがないと：' + s.t + '</p>' +
+                    '<p class="fix">💡 やっていること：' + s.f + '</p>';
+
+    btn.addEventListener("click", function(){
+      var open = pan.hidden;
+      pan.hidden = !open;
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      wrap.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    wrap.appendChild(btn); wrap.appendChild(pan); host.appendChild(wrap);
+  });
+}
+
+var QUIZ = [
+  {
+    q:"アイコンをダブルクリックしたとき、最初に動くのは？",
+    c:["アプリ本体","Getdownのランチャー","ブラウザ","データベース"],
+    a:1,
+    e:"先に動くのは小さなランチャーです。更新の確認と入れ替えが終わってから、本体を起動します。だから利用者は、いつも最新の状態で使い始められます。"
+  },
+  {
+    q:"「このファイルは変わった」と、どうやって判断している？",
+    c:["ファイルの日付","ファイル名","一覧表に書かれたハッシュ","利用者に聞く"],
+    a:2,
+    e:"中身から計算したハッシュを突き合わせます。日付やサイズは、中身が同じでも変わることがあるため、判定には使いません。"
+  },
+  {
+    q:"<code>appbase</code> とは何のこと？",
+    c:["更新ファイルが置いてあるURL","アプリの名前","起動するクラス名","データベースの場所"],
+    a:0,
+    e:"配布元のURLです。設定に書かれたファイル名は、すべてこの場所を基準に組み立てられます。ここを変えれば、配布元をまるごと引っ越せます。"
+  },
+  {
+    q:"利用者に配るインストーラの中身は？",
+    c:["アプリ本体のすべて","ランチャーと、入口の設定だけ","何も入っていない","データベース"],
+    a:1,
+    e:"本体は入っていません。ランチャーと、本物の設定ファイルがどこにあるかを書いた入口だけ。本体は初回の起動時にダウンロードされます。"
+  },
+  {
+    q:"この方式が使われるようになった背景は？",
+    c:["ブラウザが速くなったから","Java Web Start が使えなくなったから","通信が有料になったから","画面が大きくなったから"],
+    a:1,
+    e:"ブラウザ経由でJavaアプリを起動・更新する仕組みが廃止されました。その置きかえとして、アプリ自身が更新を取りに行くランチャー方式が残りました。"
+  }
+];
+
+var qIndex = 0, qScore = 0;
+
+function renderQuiz(){
+  var host = document.getElementById("quiz");
+  if(!host) return;
+
+  if(qIndex >= QUIZ.length){
+    var msg = qScore === 5 ? "全問正解。もう人に説明できるレベル。"
+            : qScore >= 3 ? "いい線いってる。まちがえた問題ほど、覚えて帰れる。"
+            : "ここからが面白いところ。上の5ステップをもう一度ひらいてみよう。";
+    host.innerHTML = '<p class="score">結果：' + qScore + ' / ' + QUIZ.length + ' 問正解</p>' +
+                     '<p style="margin:0 0 14px">' + msg + '</p>' +
+                     '<button class="qnext" type="button" id="again">もう一度やる</button>';
+    document.getElementById("again").addEventListener("click", function(){
+      qIndex = 0; qScore = 0; renderQuiz();
+    });
+    return;
+  }
+
+  var item = QUIZ[qIndex];
+  var html = '<div class="qhead"><span class="qcount">第' + (qIndex+1) + '問 / ' + QUIZ.length + '問</span></div>' +
+             '<p class="qtext">' + item.q + '</p><div class="choices">';
+  item.c.forEach(function(text, i){
+    html += '<button class="choice" type="button" data-i="' + i + '">' + text + '</button>';
+  });
+  html += '</div><div class="answer" id="answer" hidden></div>';
+  host.innerHTML = html;
+
+  var buttons = host.querySelectorAll(".choice");
+  Array.prototype.forEach.call(buttons, function(b){
+    b.addEventListener("click", function(){
+      var picked = parseInt(b.dataset.i, 10);
+      var ok = picked === item.a;
+      if(ok) qScore++;
+
+      Array.prototype.forEach.call(buttons, function(x, i){
+        x.disabled = true;
+        if(i === item.a) x.classList.add("correct");
+        else if(i === picked) x.classList.add("wrong");
+      });
+
+      var ans = document.getElementById("answer");
+      ans.hidden = false;
+      ans.innerHTML = '<span class="verdict ' + (ok ? "ok" : "ng") + '">' +
+                      (ok ? "正解！" : "残念、正解は「" + item.c[item.a].replace(/<[^>]+>/g,"") + "」") + '</span>' +
+                      item.e +
+                      '<div><button class="qnext" type="button" id="next">' +
+                      (qIndex === QUIZ.length - 1 ? "結果を見る" : "次の問題へ") + '</button></div>';
+      document.getElementById("next").addEventListener("click", function(){
+        qIndex++; renderQuiz();
+      });
+      document.getElementById("next").focus();
+    });
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  document.getElementById("version").textContent = "v" + APP_VERSION;
+  initSwitch();
+  initCalc();
+  buildLife();
+  renderQuiz();
+});
+</script>
+</body>
+</html>

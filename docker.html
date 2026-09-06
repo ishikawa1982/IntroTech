@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dockerのしくみ — 動く環境ごと、箱に詰める</title>
+<meta name="description" content="Docker（コンテナ）を、たとえ話・図解・クイズでたどるやさしい解説ページ。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="topbar">
+  <span class="logo">Dockerのしくみ</span>
+  <span class="ver" id="version">v1.0.0</span>
+  <a class="home" href="index.html">← 用語集トップ</a>
+</header>
+
+<main>
+
+<div class="hero" id="basic">
+  <h1><span class="mark">「私のPCでは動く」</span>を、<br>なくすために。</h1>
+  <p>自分のパソコンでは完璧に動いた。テスト機に持っていったら動かない。原因は、入っているライブラリの版がひとつ違っただけ——この不毛な時間をなくすために、<strong>Docker</strong> はアプリだけでなく「動かすのに必要なもの一式」を箱に詰めて持ち歩けるようにしました。</p>
+
+  <div class="chain">
+    <p class="chain-title">アプリが、どこでも同じように動きだすまで——</p>
+    <ol>
+      <li>
+        <span class="node now">手順書を書く<small>いま</small></span>
+        <span class="say">何を入れて、どう起動するかを1枚のファイルに書く</span>
+      </li>
+      <li class="arrowline">その通りに組み立てる</li>
+      <li>
+        <span class="node">イメージができる<small>箱の設計図</small></span>
+        <span class="say">必要なものを全部そろえた、動かない状態の完成品</span>
+      </li>
+      <li class="arrowline">置き場に上げて、持っていく</li>
+      <li>
+        <span class="node robot">どこかで実行する<small>自動</small></span>
+        <span class="say">開発機でも、検証機でも、まったく同じイメージを使う</span>
+      </li>
+      <li class="arrowline">数秒で</li>
+      <li>
+        <span class="node goal">コンテナが動く<small>中身は同一</small></span>
+        <span class="say">環境のちがいで動かない、が原理的に起きにくくなる</span>
+      </li>
+    </ol>
+  </div>
+  <p class="lead" style="margin-bottom:0">運ぶのはアプリではなく、<span class="pen">アプリが入った箱ごと</span>。これが今日のいちばん大事なところ。</p>
+</div>
+
+<section id="why">
+  <h2>なんで、こんなものが生まれたの？</h2>
+  <p class="lead">答えはシンプル。<span class="mark pink">環境構築の手順書は、そのとおりに動かないから。</span></p>
+
+  <div class="notes">
+    <div class="note">
+      <h3>手順書は、書いた瞬間から古くなる</h3>
+      <p>「これとこれを入れて、この設定を書いてください」。半年後に同じ手順をなぞると、入るものの版が変わっていて動きません。入れた順番で結果が変わることさえあります。</p>
+      <p class="eg">新しい人が入るたびに、まる1日を環境構築でつぶす。しかも全員が微妙に違う環境になります。</p>
+    </div>
+
+    <div class="note">
+      <h3>サーバーを丸ごと用意するのは、重い</h3>
+      <p>環境をそろえる方法として、仮想マシンを配る手もありました。ただし中にOSが丸ごと入るので、1つ数GB、起動に数分かかります。</p>
+      <p class="eg">アプリ1つ試すために、OSを1台ぶん立ち上げる。用途に対して、道具が大きすぎました。</p>
+    </div>
+
+    <div class="note">
+      <h3>だから、アプリの周りだけ箱にする</h3>
+      <p>OSの中核部分はホスト側のものを借り、アプリとその周辺だけを箱に詰めます。だから軽く、起動は数秒。</p>
+      <p class="eg">同じ箱を開発機でも本番でも使うので、「環境が違うから動かない」の余地が減ります。手順書ではなく、結果そのものを配る発想です。</p>
+    </div>
+  </div>
+</section>
+
+<section id="compare">
+  <h2>仮想マシンと、何がちがう？</h2>
+  <p class="lead">ボタンで切りかえて、重なりの数を見てみよう。</p>
+
+  <div class="board">
+    <div class="switch">
+      <button type="button" id="btn-vm" aria-pressed="true">仮想マシン</button>
+      <button type="button" id="btn-ct" aria-pressed="false">コンテナ</button>
+    </div>
+    <p class="tally" id="tally">起動にかかる時間　<b>数分</b></p>
+    <figure style="margin:0">
+      <svg viewBox="0 0 600 250" role="img" aria-label="仮想マシンはアプリごとにゲストOSが必要だが、コンテナはOSを共有して軽くなることを示す図">
+        <g font-family="'Zen Maru Gothic',sans-serif">
+          <rect x="30" y="196" width="540" height="34" rx="8" fill="#EEF3F8" stroke="#16263F" stroke-width="2"/>
+          <text x="300" y="218" text-anchor="middle" font-size="13" font-weight="700" fill="#16263F">物理サーバー</text>
+
+          <g id="dk-vm">
+            <rect x="30" y="158" width="540" height="32" rx="8" fill="#E8E2FB" stroke="#16263F" stroke-width="2"/>
+            <text x="300" y="179" text-anchor="middle" font-size="13" font-weight="700" fill="#16263F">ホストOS ＋ 仮想化の土台</text>
+            <g>
+              <rect x="40" y="42" width="165" height="110" rx="10" fill="#FDE6DC" stroke="#16263F" stroke-width="2"/>
+              <rect x="215" y="42" width="165" height="110" rx="10" fill="#FDE6DC" stroke="#16263F" stroke-width="2"/>
+              <rect x="390" y="42" width="165" height="110" rx="10" fill="#FDE6DC" stroke="#16263F" stroke-width="2"/>
+            </g>
+            <g font-size="12.5" font-family="'Zen Kaku Gothic New',sans-serif" fill="#16263F">
+              <text x="122" y="62" text-anchor="middle" font-weight="700">仮想マシン</text>
+              <text x="297" y="62" text-anchor="middle" font-weight="700">仮想マシン</text>
+              <text x="472" y="62" text-anchor="middle" font-weight="700">仮想マシン</text>
+            </g>
+            <g fill="#FFD9D6" stroke="#16263F" stroke-width="1.5">
+              <rect x="54" y="70" width="137" height="34" rx="6"/>
+              <rect x="229" y="70" width="137" height="34" rx="6"/>
+              <rect x="404" y="70" width="137" height="34" rx="6"/>
+            </g>
+            <g font-size="12" fill="#16263F" font-family="'Zen Kaku Gothic New',sans-serif">
+              <text x="122" y="92" text-anchor="middle">ゲストOS（数GB）</text>
+              <text x="297" y="92" text-anchor="middle">ゲストOS（数GB）</text>
+              <text x="472" y="92" text-anchor="middle">ゲストOS（数GB）</text>
+            </g>
+            <g fill="#FFE066" stroke="#16263F" stroke-width="1.5">
+              <rect x="54" y="112" width="137" height="30" rx="6"/>
+              <rect x="229" y="112" width="137" height="30" rx="6"/>
+              <rect x="404" y="112" width="137" height="30" rx="6"/>
+            </g>
+            <g font-size="12" fill="#16263F" font-family="'Zen Kaku Gothic New',sans-serif">
+              <text x="122" y="132" text-anchor="middle">アプリ</text>
+              <text x="297" y="132" text-anchor="middle">アプリ</text>
+              <text x="472" y="132" text-anchor="middle">アプリ</text>
+            </g>
+            <text x="300" y="30" text-anchor="middle" font-size="14" font-weight="700" fill="#E4453A">アプリ1つごとに、OSが1つ必要</text>
+          </g>
+
+          <g id="dk-ct" class="hidden">
+            <rect x="30" y="158" width="540" height="32" rx="8" fill="#E8E2FB" stroke="#16263F" stroke-width="2"/>
+            <text x="300" y="179" text-anchor="middle" font-size="13" font-weight="700" fill="#16263F">ホストOS（1つを、みんなで借りる）</text>
+            <rect x="30" y="122" width="540" height="30" rx="8" fill="#D3C4F2" stroke="#16263F" stroke-width="2"/>
+            <text x="300" y="142" text-anchor="middle" font-size="13" font-weight="700" fill="#16263F">コンテナを動かすしくみ（Docker）</text>
+            <g fill="#DDF3E5" stroke="#16263F" stroke-width="2">
+              <rect x="40" y="62" width="123" height="54" rx="10"/>
+              <rect x="173" y="62" width="123" height="54" rx="10"/>
+              <rect x="306" y="62" width="123" height="54" rx="10"/>
+              <rect x="439" y="62" width="123" height="54" rx="10"/>
+            </g>
+            <g font-size="12.5" fill="#16263F" font-family="'Zen Kaku Gothic New',sans-serif">
+              <text x="101" y="86" text-anchor="middle" font-weight="700">アプリ</text>
+              <text x="234" y="86" text-anchor="middle" font-weight="700">アプリ</text>
+              <text x="367" y="86" text-anchor="middle" font-weight="700">アプリ</text>
+              <text x="500" y="86" text-anchor="middle" font-weight="700">アプリ</text>
+              <text x="101" y="104" text-anchor="middle">＋必要な部品</text>
+              <text x="234" y="104" text-anchor="middle">＋必要な部品</text>
+              <text x="367" y="104" text-anchor="middle">＋必要な部品</text>
+              <text x="500" y="104" text-anchor="middle">＋必要な部品</text>
+            </g>
+            <text x="300" y="42" text-anchor="middle" font-size="14" font-weight="700" fill="#1E8A4C">OSは1つ。同じ台に、たくさん載る</text>
+          </g>
+        </g>
+      </svg>
+      <figcaption>コンテナが軽いのは、魔法ではなくOSを共有しているからです。そのぶん、仮想マシンほど強く隔離されているわけではない、という違いもあります。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="calc">
+  <h2>同じ1台に、いくつ載る？</h2>
+  <p class="lead">サーバーのメモリと、アプリ1つが使う量を選んでみよう。</p>
+  <div class="calcbox">
+    <div class="calcrow">
+      <div>
+        <label for="mem">サーバーのメモリ</label>
+        <select id="mem"></select>
+      </div>
+      <div>
+        <label for="app">アプリ1つの使用量</label>
+        <select id="app"></select>
+      </div>
+    </div>
+    <div class="result" id="calc-result"></div>
+  </div>
+</section>
+
+<section id="flow">
+  <h2>箱ができて、消えるまで</h2>
+  <p class="lead">Dockerを使うときの流れは、この5つ。<span class="pen">タップして開いてみよう。</span></p>
+
+  <div class="tree">
+    <h3>手順書から、動くコンテナまで</h3>
+    <div class="step-list" id="tree-flow"></div>
+  </div>
+</section>
+
+<section id="terms">
+  <h2>まちがえやすい3つ</h2>
+  <p class="lead">ここを取りちがえると、話が噛み合わなくなります。</p>
+  <div class="notes">
+    <div class="note">
+      <h3>イメージとコンテナは、別のもの</h3>
+      <p>イメージは<span class="mark cyan">たい焼きの型</span>、コンテナは<span class="mark cyan">焼き上がったたい焼き</span>です。1つのイメージから、いくつでもコンテナを作れます。</p>
+      <p class="eg">イメージは変わりません。コンテナは動いて、汚れて、捨てられます。「イメージを直す」と「コンテナを直す」はまったく別の作業です。</p>
+    </div>
+    <div class="note">
+      <h3>コンテナは、使い捨てが前提</h3>
+      <p>中に入って設定を直しても、作り直した瞬間に消えます。直したいときは手順書のほうを直して、イメージを作り直します。</p>
+      <p class="eg">「サーバーに入って直す」という運用から抜けるのが、いちばん大きな頭の切りかえです。</p>
+    </div>
+    <div class="note">
+      <h3>データは、箱の外に置く</h3>
+      <p>消えては困るもの——データベースの中身やアップロードされたファイルは、箱の中に置きません。外の保存領域を箱に繋いで使います。</p>
+      <p class="eg">「壊れたら作り直す」を気軽にやるためには、壊れて困るものが中に入っていないことが前提になります。</p>
+    </div>
+  </div>
+</section>
+
+<section id="quiz">
+  <h2>クイズ：きみは何問わかる？</h2>
+  <p class="lead">全5問。まちがえても大丈夫、答えのほうが面白い。</p>
+  <div class="quiz" id="quiz"></div>
+</section>
+
+<section id="careful">
+  <h2>気をつけないと、あとで困る</h2>
+  <p class="lead">軽く始められるぶん、雑にも作れてしまいます。</p>
+  <ol class="steps">
+    <li><b>秘密の情報を、イメージに焼き込まない。</b>パスワードや鍵を手順書に書くと、イメージの中に残り続けます。実行時に外から渡す形にします。</li>
+    <li><b><code>latest</code> だけに頼らない。</b>「最新」という名前は、時期によって中身が変わります。動かした版を特定できるよう、番号を付けたタグを使います。</li>
+    <li><b>管理者権限で動かさない。</b>既定のままだと強い権限で動きます。箱の中で悪さをされたときの被害を小さくするため、専用の利用者で動かします。</li>
+    <li><b>イメージを太らせない。</b>ビルドに使った道具まで入ったままだと、無駄に大きく、危険な部品も増えます。動かすのに要るものだけを最後に残します。</li>
+    <li><b>ログはファイルに書かない。</b>箱が消えれば一緒に消えます。画面に出す形にしておき、集める役目は外に任せます。</li>
+    <li><b>消えて困るものの置き場を決める。</b>作り直すたびに消えていい場所と、残さないといけない場所を、最初に線引きしておきます。</li>
+  </ol>
+</section>
+
+<section id="words">
+  <h2>ことばのミニ辞典</h2>
+  <p class="lead">この先どこかで見かけたときのために。</p>
+  <dl class="words">
+    <dt>イメージ</dt>
+    <dd>アプリと、動かすのに必要なもの一式を固めた完成品。たい焼きの型にあたる、動いていない状態のもの。</dd>
+    <dt>コンテナ</dt>
+    <dd>イメージから作られた、実際に動いている箱。同じイメージから、いくつでも作れる。</dd>
+    <dt>Dockerfile</dt>
+    <dd>イメージの作り方を書いた手順書。何を入れて、どう起動するかを上から順に書く。</dd>
+    <dt>レジストリ</dt>
+    <dd>イメージを置いておく倉庫。ここに上げておけば、別の場所から取ってきて動かせる。</dd>
+    <dt>ボリューム</dt>
+    <dd>箱の外にある保存領域。消えては困るデータを置き、箱に繋いで使う。</dd>
+    <dt>レイヤー</dt>
+    <dd>イメージを構成する層。手順書の1行ごとに層が積まれ、変わっていない層は再利用されるので、作り直しが速くなる。</dd>
+  </dl>
+</section>
+
+<section class="sibling">
+  <h2>ほかの解説ページ</h2>
+  <ul>
+    <li><a href="mcp.html"><b>MCPのしくみ</b><span>AIは、外の道具を借りて動いている。</span></a></li>
+    <li><a href="cicd.html"><b>CI/CDのしくみ</b><span>直したものを、こわがらずに届けるために。</span></a></li>
+    <li><a href="websocket.html"><b>WebSocketのしくみ</b><span>「まだ？」と聞きに行かなくてよくなった日。</span></a></li>
+    <li><a href="flyway.html"><b>Flywayのしくみ</b><span>データベースだけ、やり直しがきかない。</span></a></li>
+    <li><a href="getdown.html"><b>Getdownのしくみ</b><span>配ったあとに、直せるようにする。</span></a></li>
+    <li><a href="angular.html"><b>Angularのしくみ</b><span>画面を、部品に切り分ける。</span></a></li>
+    <li><a href="bigip.html"><b>BIG-IPのしくみ</b><span>入口を1つにして、裏を何台にでも。</span></a></li>
+    <li><a href="spring.html"><b>Springのしくみ</b><span>部品の組み立てを、任せてしまう。</span></a></li>
+    <li><a href="kubernetes.html"><b>Kubernetesのしくみ</b><span>落ちたら、勝手に起き上がる。</span></a></li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <p>Docker を、たとえ話・図解・クイズでたどるやさしい解説ページです。コマンドや書き方の詳細は、公式ドキュメントをどうぞ。</p>
+  <p class="footver">Dockerのしくみ　v1.0.0</p>
+</footer>
+
+</div>
+
+<script>
+"use strict";
+var APP_VERSION = "1.0.0";
+
+function initSwitch(){
+  var vm = document.getElementById("dk-vm");
+  var ct = document.getElementById("dk-ct");
+  var vBtn = document.getElementById("btn-vm");
+  var cBtn = document.getElementById("btn-ct");
+  var tally = document.getElementById("tally");
+  if(!vm || !ct) return;
+
+  function show(isVm){
+    vm.classList.toggle("hidden", !isVm);
+    ct.classList.toggle("hidden", isVm);
+    vBtn.setAttribute("aria-pressed", isVm ? "true" : "false");
+    cBtn.setAttribute("aria-pressed", isVm ? "false" : "true");
+    tally.innerHTML = isVm ? '起動にかかる時間　<b>数分</b>' : '起動にかかる時間　<b>数秒</b>';
+  }
+  vBtn.addEventListener("click", function(){ show(true); });
+  cBtn.addEventListener("click", function(){ show(false); });
+}
+
+function initCalc(){
+  var m = document.getElementById("mem");
+  var a = document.getElementById("app");
+  var res = document.getElementById("calc-result");
+  if(!m || !a) return;
+
+  [8,16,32,64,128,256].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v + "GB";
+    if(v === 32) o.selected = true;
+    m.appendChild(o);
+  });
+  [0.25,0.5,1,2,4].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v + "GB";
+    if(v === 1) o.selected = true;
+    a.appendChild(o);
+  });
+
+  function update(){
+    var mem = parseFloat(m.value);
+    var app = parseFloat(a.value);
+    var host = 2;                       // ホストOSの取り分
+    var guestOs = 2;                    // 仮想マシン1台ごとのゲストOS
+    var usable = Math.max(mem - host, 0);
+    var vmCount = Math.floor(usable / (app + guestOs));
+    var ctCount = Math.floor(usable / app);
+    var max = Math.max(ctCount, 1);
+
+    var html = '<p class="rline">仮想マシンなら <strong>' + vmCount +
+               '個</strong>、コンテナなら <strong>' + ctCount +
+               '個</strong>（ゲストOSを1台あたり ' + guestOs + 'GB と見た場合）。</p>';
+
+    html += '<div class="bars">';
+    html += '<div><p class="bar-label">仮想マシン　1つあたり ' + (app + guestOs) + 'GB</p>' +
+            '<div class="bar"><span style="width:' + (vmCount / max * 100) + '%"></span></div></div>';
+    html += '<div><p class="bar-label">コンテナ　1つあたり ' + app + 'GB</p>' +
+            '<div class="bar good"><span style="width:100%"></span></div></div>';
+    html += '</div>';
+
+    html += '<p class="rline" style="margin:0">差が生まれる理由は1つだけ、OSを人数分もつかどうかです。' +
+            (app <= 0.5
+              ? '小さなアプリをたくさん並べるほど、この差は大きくなります。'
+              : 'アプリ自体が重い場合は差が縮みます。それでも、起動の速さという別の利点は残ります。') +
+            '</p>';
+    res.innerHTML = html;
+  }
+
+  m.addEventListener("change", update);
+  a.addEventListener("change", update);
+  update();
+}
+
+var FLOW = [
+  {y:"①", n:"手順書を書く", t:"環境の作り方が人の頭の中にあると、<b>再現できるのは書いた本人だけ</b>になる。", f:"何を入れて、どう起動するかをファイルに書く。手順が文章ではなくコードになるので、レビューも履歴も残せる。"},
+  {y:"②", n:"組み立てる（ビルド）", t:"手で作った環境は、<b>作るたびに少しずつ違うもの</b>ができる。", f:"手順書のとおりに実行して、イメージを作る。同じ手順書からは、同じものができる。"},
+  {y:"③", n:"倉庫に置く", t:"手元にしかないと、<b>別のサーバーへ持っていけない</b>。", f:"レジストリと呼ばれる倉庫に上げる。以降はどこからでも、名前を指定して取ってこられる。"},
+  {y:"④", n:"実行する", t:"環境ごとに別のものを作ると、<b>「動くはずなのに動かない」が再発する</b>。", f:"取ってきたイメージから、コンテナを起動する。開発機でも本番でも、まったく同じイメージを使う。"},
+  {y:"⑤", n:"捨てて、また作る", t:"動いているものに手を入れ続けると、<b>誰も再現できない状態</b>ができあがる。", f:"直したいときはコンテナではなく手順書を直し、作り直す。データは外に置いてあるので、捨てても困らない。"}
+];
+
+function buildFlow(){
+  var host = document.getElementById("tree-flow");
+  if(!host) return;
+  FLOW.forEach(function(s, i){
+    var wrap = document.createElement("div");
+    wrap.className = "step";
+    wrap.setAttribute("aria-expanded","false");
+    var btnId = "flow-btn-" + i, panId = "flow-pan-" + i;
+
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.id = btnId;
+    btn.setAttribute("aria-controls", panId);
+    btn.setAttribute("aria-expanded","false");
+    btn.innerHTML = '<span class="yr">' + s.y + '</span><span class="nm">' + s.n +
+                    '</span><span class="plus" aria-hidden="true"></span>';
+
+    var pan = document.createElement("div");
+    pan.className = "detail"; pan.id = panId; pan.hidden = true;
+    pan.setAttribute("role","region");
+    pan.setAttribute("aria-labelledby", btnId);
+    pan.innerHTML = '<p class="trouble">😖 これがないと：' + s.t + '</p>' +
+                    '<p class="fix">💡 やっていること：' + s.f + '</p>';
+
+    btn.addEventListener("click", function(){
+      var open = pan.hidden;
+      pan.hidden = !open;
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      wrap.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    wrap.appendChild(btn); wrap.appendChild(pan); host.appendChild(wrap);
+  });
+}
+
+var QUIZ = [
+  {
+    q:"イメージとコンテナの関係は？",
+    c:["まったく同じもの","イメージが型、コンテナが焼き上がったもの","コンテナが型、イメージが実体","関係ない"],
+    a:1,
+    e:"1つのイメージから、コンテナはいくつでも作れます。イメージは変わらず、コンテナは動いて、いずれ捨てられます。ここを混ぜると話が噛み合いません。"
+  },
+  {
+    q:"コンテナが仮想マシンより軽いのは、なぜ？",
+    c:["圧縮しているから","OSをホストと共有しているから","通信しないから","小さく書いているから"],
+    a:1,
+    e:"仮想マシンは中にOSを丸ごと抱えます。コンテナはホストのOSを借りるので、アプリと周辺の部品だけで済み、起動も数秒になります。"
+  },
+  {
+    q:"動いているコンテナの中で設定を直すと、どうなる？",
+    c:["ずっと残る","作り直したときに消える","イメージにも反映される","エラーになる"],
+    a:1,
+    e:"コンテナは使い捨てが前提です。直すべきは手順書のほう。「サーバーに入って直す」という運用から抜けるのが、いちばん大きな頭の切りかえです。"
+  },
+  {
+    q:"消えては困るデータは、どこに置く？",
+    c:["コンテナの中","箱の外の保存領域","手順書の中","メモリ"],
+    a:1,
+    e:"外の保存領域（ボリューム）を箱に繋いで使います。壊れたら作り直す、を気軽にやるためには、壊れて困るものが中に入っていないことが前提になります。"
+  },
+  {
+    q:"イメージのタグに <code>latest</code> だけを使うと、何が困る？",
+    c:["容量が増える","どの版が動いているか特定できない","起動が遅くなる","通信できない"],
+    a:1,
+    e:"「最新」は時期によって中身が変わります。障害が起きたとき「何が動いていたのか」を追えなくなるので、番号を付けたタグを併用します。"
+  }
+];
+
+var qIndex = 0, qScore = 0;
+
+function renderQuiz(){
+  var host = document.getElementById("quiz");
+  if(!host) return;
+
+  if(qIndex >= QUIZ.length){
+    var msg = qScore === 5 ? "全問正解。もう人に説明できるレベル。"
+            : qScore >= 3 ? "いい線いってる。まちがえた問題ほど、覚えて帰れる。"
+            : "ここからが面白いところ。上の5ステップをもう一度ひらいてみよう。";
+    host.innerHTML = '<p class="score">結果：' + qScore + ' / ' + QUIZ.length + ' 問正解</p>' +
+                     '<p style="margin:0 0 14px">' + msg + '</p>' +
+                     '<button class="qnext" type="button" id="again">もう一度やる</button>';
+    document.getElementById("again").addEventListener("click", function(){
+      qIndex = 0; qScore = 0; renderQuiz();
+    });
+    return;
+  }
+
+  var item = QUIZ[qIndex];
+  var html = '<div class="qhead"><span class="qcount">第' + (qIndex+1) + '問 / ' + QUIZ.length + '問</span></div>' +
+             '<p class="qtext">' + item.q + '</p><div class="choices">';
+  item.c.forEach(function(text, i){
+    html += '<button class="choice" type="button" data-i="' + i + '">' + text + '</button>';
+  });
+  html += '</div><div class="answer" id="answer" hidden></div>';
+  host.innerHTML = html;
+
+  var buttons = host.querySelectorAll(".choice");
+  Array.prototype.forEach.call(buttons, function(b){
+    b.addEventListener("click", function(){
+      var picked = parseInt(b.dataset.i, 10);
+      var ok = picked === item.a;
+      if(ok) qScore++;
+
+      Array.prototype.forEach.call(buttons, function(x, i){
+        x.disabled = true;
+        if(i === item.a) x.classList.add("correct");
+        else if(i === picked) x.classList.add("wrong");
+      });
+
+      var ans = document.getElementById("answer");
+      ans.hidden = false;
+      ans.innerHTML = '<span class="verdict ' + (ok ? "ok" : "ng") + '">' +
+                      (ok ? "正解！" : "残念、正解は「" + item.c[item.a].replace(/<[^>]+>/g,"") + "」") + '</span>' +
+                      item.e +
+                      '<div><button class="qnext" type="button" id="next">' +
+                      (qIndex === QUIZ.length - 1 ? "結果を見る" : "次の問題へ") + '</button></div>';
+      document.getElementById("next").addEventListener("click", function(){
+        qIndex++; renderQuiz();
+      });
+      document.getElementById("next").focus();
+    });
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  document.getElementById("version").textContent = "v" + APP_VERSION;
+  initSwitch();
+  initCalc();
+  buildFlow();
+  renderQuiz();
+});
+</script>
+</body>
+</html>

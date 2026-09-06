@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BIG-IPのしくみ — 入口を1つにして、裏を何台にでも</title>
+<meta name="description" content="BIG-IP（ロードバランサ／ADC）を、たとえ話・図解・クイズでたどるやさしい解説ページ。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="topbar">
+  <span class="logo">BIG-IPのしくみ</span>
+  <span class="ver" id="version">v1.0.0</span>
+  <a class="home" href="index.html">← 用語集トップ</a>
+</header>
+
+<main>
+
+<div class="hero" id="basic">
+  <h1>入口を<span class="mark">1つ</span>にして、<br>裏を何台にでも。</h1>
+  <p>アクセスが増えたので、サーバーを3台に増やした。でも利用者に「3つのアドレスを順番に試してください」とは言えない。入口は1つのまま、裏側だけ増やしたい。その入口を引き受ける機械が <strong>BIG-IP</strong> です。F5社の製品で、いわゆるロードバランサの代表格。</p>
+
+  <div class="chain">
+    <p class="chain-title">利用者がアクセスしてから、応答が返るまで——</p>
+    <ol>
+      <li>
+        <span class="node now">利用者<small>いま</small></span>
+        <span class="say">いつもの1つのアドレスにアクセスしただけ</span>
+      </li>
+      <li class="arrowline">受けるのはサーバーではない</li>
+      <li>
+        <span class="node robot">仮想サーバー<small>BIG-IPの受付</small></span>
+        <span class="say">利用者から見える、たった1つの入口</span>
+      </li>
+      <li class="arrowline">誰に渡すか決める</li>
+      <li>
+        <span class="node">プールから選ぶ<small>元気な1台</small></span>
+        <span class="say">今いちばん余裕がある、生きているサーバーを選ぶ</span>
+      </li>
+      <li class="arrowline">そして</li>
+      <li>
+        <span class="node goal">応答が返る<small>裏は見えない</small></span>
+        <span class="say">利用者は、何台で動いているかを知らないまま使い終わる</span>
+      </li>
+    </ol>
+  </div>
+  <p class="lead" style="margin-bottom:0">やっていることは「<span class="pen">受けて、選んで、渡す</span>」。これが今日のいちばん大事なところ。</p>
+</div>
+
+<section id="why">
+  <h2>なんで、こんな機械が要るの？</h2>
+  <p class="lead">答えはシンプル。<span class="mark pink">1台では、いつか足りなくなるから。</span></p>
+
+  <div class="notes">
+    <div class="note">
+      <h3>増やしたいが、入口は増やせない</h3>
+      <p>サーバーを増やすのは簡単です。難しいのは、利用者から見える入口を1つに保ったまま増やすこと。アドレスが変わると、全員に連絡して回ることになります。</p>
+      <p class="eg">入口を固定したまま、裏側だけ自由に増やしたり減らしたりできる。これがいちばんの価値です。</p>
+    </div>
+
+    <div class="note">
+      <h3>1台壊れると、全体が壊れて見える</h3>
+      <p>3台のうち1台が止まったとき、そこに当たった利用者にはサービス全体が落ちて見えます。運が悪い人だけがエラーになる、という一番やっかいな状態です。</p>
+      <p class="eg">BIG-IPは各サーバーに定期的に声をかけ、返事がないものを振り分け先から外します。壊れた台には、そもそも渡さない。</p>
+    </div>
+
+    <div class="note">
+      <h3>ついでに、面倒ごとも引き受ける</h3>
+      <p>暗号化の処理をここでまとめて解く、同じ利用者を同じサーバーへ送り続ける、特定のURLだけ別のサーバー群へ回す。入口にいるからこそできる仕事があります。</p>
+      <p class="eg">各サーバーに同じ設定を配って回るかわりに、入口の1か所で決められる。運用の手間が集約されます。</p>
+    </div>
+  </div>
+</section>
+
+<section id="compare">
+  <h2>1台が止まったとき、どうなる？</h2>
+  <p class="lead">ボタンで切りかえて、利用者から見える結果をくらべてみよう。</p>
+
+  <div class="board">
+    <div class="switch">
+      <button type="button" id="btn-single" aria-pressed="true">1台構成</button>
+      <button type="button" id="btn-lb" aria-pressed="false">BIG-IP経由</button>
+    </div>
+    <p class="tally" id="tally">1台止まったときのサービス　<b>全停止</b></p>
+    <figure style="margin:0">
+      <svg viewBox="0 0 600 250" role="img" aria-label="1台構成ではサーバーが止まるとサービスが停止し、BIG-IP経由なら残りのサーバーで継続できることを示す図">
+        <g font-family="'Zen Maru Gothic',sans-serif">
+          <g id="lb-single">
+            <rect x="220" y="16" width="160" height="40" rx="12" fill="#9BDDF3" stroke="#16263F" stroke-width="2"/>
+            <text x="300" y="42" text-anchor="middle" font-size="14" font-weight="700" fill="#16263F">利用者</text>
+            <line x1="300" y1="56" x2="300" y2="120" stroke="#E4453A" stroke-width="3" stroke-dasharray="8 6"/>
+            <rect x="220" y="122" width="160" height="70" rx="12" fill="#FFD9D6" stroke="#E4453A" stroke-width="3"/>
+            <text x="300" y="152" text-anchor="middle" font-size="14" font-weight="700" fill="#16263F">サーバー</text>
+            <text x="300" y="176" text-anchor="middle" font-size="20" fill="#E4453A">✕ 停止</text>
+            <text x="300" y="222" text-anchor="middle" font-size="15" font-weight="700" fill="#E4453A">全員がつながらない</text>
+            <text x="300" y="242" text-anchor="middle" font-size="12.5" fill="#54677E" font-family="'Zen Kaku Gothic New',sans-serif">再起動が終わるまで、業務が止まる</text>
+          </g>
+
+          <g id="lb-multi" class="hidden">
+            <rect x="220" y="10" width="160" height="36" rx="12" fill="#9BDDF3" stroke="#16263F" stroke-width="2"/>
+            <text x="300" y="34" text-anchor="middle" font-size="14" font-weight="700" fill="#16263F">利用者</text>
+            <line x1="300" y1="46" x2="300" y2="66" stroke="#16263F" stroke-width="3"/>
+            <rect x="200" y="68" width="200" height="44" rx="12" fill="#D3C4F2" stroke="#16263F" stroke-width="2"/>
+            <text x="300" y="88" text-anchor="middle" font-size="14" font-weight="700" fill="#16263F">BIG-IP（仮想サーバー）</text>
+            <text x="300" y="105" text-anchor="middle" font-size="11" fill="#16263F" font-family="'Zen Kaku Gothic New',sans-serif">見える入口は、ここだけ</text>
+            <g stroke="#25A167" stroke-width="3" fill="none">
+              <path d="M250 112 Q160 130 110 160"/>
+              <path d="M300 112 L300 160"/>
+            </g>
+            <path d="M350 112 Q440 130 490 160" stroke="#C3D2DE" stroke-width="3" stroke-dasharray="7 6" fill="none"/>
+            <g>
+              <rect x="35" y="162" width="150" height="56" rx="10" fill="#DDF3E5" stroke="#16263F" stroke-width="2"/>
+              <text x="110" y="188" text-anchor="middle" font-size="13" font-weight="700" fill="#16263F">サーバー1</text>
+              <text x="110" y="206" text-anchor="middle" font-size="12" fill="#1E8A4C" font-family="'Zen Kaku Gothic New',sans-serif">✓ 応答あり</text>
+              <rect x="225" y="162" width="150" height="56" rx="10" fill="#DDF3E5" stroke="#16263F" stroke-width="2"/>
+              <text x="300" y="188" text-anchor="middle" font-size="13" font-weight="700" fill="#16263F">サーバー2</text>
+              <text x="300" y="206" text-anchor="middle" font-size="12" fill="#1E8A4C" font-family="'Zen Kaku Gothic New',sans-serif">✓ 応答あり</text>
+              <rect x="415" y="162" width="150" height="56" rx="10" fill="#FFD9D6" stroke="#E4453A" stroke-width="2"/>
+              <text x="490" y="188" text-anchor="middle" font-size="13" font-weight="700" fill="#16263F">サーバー3</text>
+              <text x="490" y="206" text-anchor="middle" font-size="12" fill="#E4453A" font-family="'Zen Kaku Gothic New',sans-serif">✕ 振り分け対象から除外</text>
+            </g>
+            <text x="300" y="242" text-anchor="middle" font-size="14" font-weight="700" fill="#1E8A4C">利用者は、1台落ちたことに気づかない</text>
+          </g>
+        </g>
+      </svg>
+      <figcaption>点線が「もう渡さない」経路。定期的な生存確認（ヘルスモニター）で返事がなくなった台を、自動で振り分け先から外しています。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="calc">
+  <h2>何台あれば、耐えられる？</h2>
+  <p class="lead">台数と1台あたりの処理能力を選ぶと、1台落ちたときに残る力を計算します。</p>
+  <div class="calcbox">
+    <div class="calcrow">
+      <div>
+        <label for="nodes">サーバーの台数</label>
+        <select id="nodes"></select>
+      </div>
+      <div>
+        <label for="cap">1台あたりの同時処理</label>
+        <select id="cap"></select>
+      </div>
+    </div>
+    <div class="result" id="calc-result"></div>
+  </div>
+</section>
+
+<section id="flow">
+  <h2>1つのアクセスが、通っていく順番</h2>
+  <p class="lead">入口の中で起きていること。<span class="pen">タップして開いてみよう。</span></p>
+
+  <div class="tree">
+    <h3>受付から応答まで</h3>
+    <div class="step-list" id="tree-flow"></div>
+  </div>
+</section>
+
+<section id="more">
+  <h2>ただの振り分け機ではない</h2>
+  <p class="lead">「ADC（アプリケーション配信コントローラ）」と呼ばれるのは、ここから先があるからです。</p>
+  <div class="notes">
+    <div class="note">
+      <h3>暗号化を、ここで解く</h3>
+      <p>利用者との暗号化通信を入口で終わらせ、裏側とは軽いやりとりにする作りが取れます。証明書の管理も、各サーバーではなく入口の1か所で済みます。</p>
+      <p class="eg">「証明書の期限切れで全社が止まった」の多くは、この1か所の更新忘れです。カレンダーに入れておく類の話になります。</p>
+    </div>
+    <div class="note">
+      <h3>細かい条件は、小さなプログラムで</h3>
+      <p>「このURLで始まるアクセスだけ別のサーバー群へ」「特定の相手からは断る」といった条件は、iRule と呼ばれる小さなスクリプトで書けます。</p>
+      <p class="eg">なんでも書けてしまうので、増えすぎると<span class="mark cyan">誰も全体を把握できない</span>状態になります。書いた理由をコメントに残すのが大事です。</p>
+    </div>
+    <div class="note">
+      <h3>入口自身も、2台で組む</h3>
+      <p>入口が1台だと、そこが止まったときに全部止まります。ふつうは2台1組で構成し、片方が倒れたらもう片方が引き継ぎます。</p>
+      <p class="eg">機能によって製品の中が分かれており、基本の負荷分散のほか、攻撃を防ぐもの、拠点間の振り分けを行うものなどがあります。</p>
+    </div>
+  </div>
+</section>
+
+<section id="quiz">
+  <h2>クイズ：きみは何問わかる？</h2>
+  <p class="lead">全5問。まちがえても大丈夫、答えのほうが面白い。</p>
+  <div class="quiz" id="quiz"></div>
+</section>
+
+<section id="careful">
+  <h2>気をつけないと、ここが弱点になる</h2>
+  <p class="lead">全部の通信が通る場所だからこそ、影響も大きくなります。</p>
+  <ol class="steps">
+    <li><b>入口が単一障害点になる。</b>裏を何台に増やしても、入口が止まれば全部止まります。冗長構成にして、切り替わりを実際に試しておきます。</li>
+    <li><b>生存確認を甘くしない。</b>「接続できるか」だけを見ていると、アプリが固まっていても正常と判定されます。画面が返るところまで確認する設定にします。</li>
+    <li><b>証明書の期限を管理する。</b>入口にまとめたぶん、切れたときの影響が全体に及びます。期限は複数人が知っている状態にしておきます。</li>
+    <li><b>設定が属人化しやすい。</b>長年の事情がスクリプトに積み重なりがちです。何のための設定かを書き残さないと、誰も消せなくなります。</li>
+    <li><b>メンテのときは、先に外す。</b>いきなり止めると、処理中のアクセスが切れます。新規の振り分けだけ止めて、処理が終わるのを待ってから作業します。</li>
+    <li><b>同じ人を同じ台へ、が前提になっていないか。</b>サーバー側が利用者の状態を自分で抱えていると、振り分け先が変わった瞬間に壊れます。できれば状態を外に出しておきます。</li>
+  </ol>
+</section>
+
+<section id="words">
+  <h2>ことばのミニ辞典</h2>
+  <p class="lead">この先どこかで見かけたときのために。</p>
+  <dl class="words">
+    <dt>ロードバランサ</dt>
+    <dd>複数のサーバーへアクセスを振り分ける機械やソフト。入口を1つに保ったまま、裏側を増やせるようにする。</dd>
+    <dt>仮想サーバー（VIP）</dt>
+    <dd>BIG-IPが利用者に見せる、たった1つの入口。実際のサーバーではなく、受付窓口として作られたアドレス。</dd>
+    <dt>プール／プールメンバー</dt>
+    <dd>振り分け先のサーバーをまとめたグループが「プール」、その中の1台1台が「プールメンバー」。</dd>
+    <dt>ヘルスモニター</dt>
+    <dd>各サーバーが生きているかを定期的に確認するしくみ。返事がない台は、振り分け先から自動で外れる。</dd>
+    <dt>パーシステンス</dt>
+    <dd>同じ利用者を同じサーバーへ送り続ける設定。サーバー側が状態を持っている場合に必要になる。</dd>
+    <dt>SSL終端</dt>
+    <dd>利用者との暗号化通信を入口で解くこと。証明書の管理を1か所にまとめられる。</dd>
+    <dt>iRule</dt>
+    <dd>BIG-IP上で動かせる小さなスクリプト。条件に応じて振り分け先を変える、といった細かい制御ができる。</dd>
+  </dl>
+</section>
+
+<section class="sibling">
+  <h2>ほかの解説ページ</h2>
+  <ul>
+    <li><a href="mcp.html"><b>MCPのしくみ</b><span>AIは、外の道具を借りて動いている。</span></a></li>
+    <li><a href="cicd.html"><b>CI/CDのしくみ</b><span>直したものを、こわがらずに届けるために。</span></a></li>
+    <li><a href="websocket.html"><b>WebSocketのしくみ</b><span>「まだ？」と聞きに行かなくてよくなった日。</span></a></li>
+    <li><a href="flyway.html"><b>Flywayのしくみ</b><span>データベースだけ、やり直しがきかない。</span></a></li>
+    <li><a href="getdown.html"><b>Getdownのしくみ</b><span>配ったあとに、直せるようにする。</span></a></li>
+    <li><a href="angular.html"><b>Angularのしくみ</b><span>画面を、部品に切り分ける。</span></a></li>
+    <li><a href="spring.html"><b>Springのしくみ</b><span>部品の組み立てを、任せてしまう。</span></a></li>
+    <li><a href="docker.html"><b>Dockerのしくみ</b><span>「私のPCでは動く」を、なくすために。</span></a></li>
+    <li><a href="kubernetes.html"><b>Kubernetesのしくみ</b><span>落ちたら、勝手に起き上がる。</span></a></li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <p>BIG-IP を、たとえ話・図解・クイズでたどるやさしい解説ページです。設定手順や製品構成の詳細は、公式のドキュメントをどうぞ。</p>
+  <p class="footver">BIG-IPのしくみ　v1.0.0</p>
+</footer>
+
+</div>
+
+<script>
+"use strict";
+var APP_VERSION = "1.0.0";
+
+function initSwitch(){
+  var one = document.getElementById("lb-single");
+  var many = document.getElementById("lb-multi");
+  var sBtn = document.getElementById("btn-single");
+  var lBtn = document.getElementById("btn-lb");
+  var tally = document.getElementById("tally");
+  if(!one || !many) return;
+
+  function show(isSingle){
+    one.classList.toggle("hidden", !isSingle);
+    many.classList.toggle("hidden", isSingle);
+    sBtn.setAttribute("aria-pressed", isSingle ? "true" : "false");
+    lBtn.setAttribute("aria-pressed", isSingle ? "false" : "true");
+    tally.innerHTML = isSingle
+      ? '1台止まったときのサービス　<b>全停止</b>'
+      : '1台止まったときのサービス　<b>継続</b>';
+  }
+  sBtn.addEventListener("click", function(){ show(true); });
+  lBtn.addEventListener("click", function(){ show(false); });
+}
+
+function initCalc(){
+  var n = document.getElementById("nodes");
+  var c = document.getElementById("cap");
+  var res = document.getElementById("calc-result");
+  if(!n || !c) return;
+
+  [1,2,3,4,5,6,8,10].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v + "台";
+    if(v === 3) o.selected = true;
+    n.appendChild(o);
+  });
+  [100,200,300,500,1000].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v + "件";
+    if(v === 300) o.selected = true;
+    c.appendChild(o);
+  });
+
+  function update(){
+    var nodes = parseInt(n.value, 10);
+    var cap = parseInt(c.value, 10);
+    var total = nodes * cap;
+    var left = Math.max(nodes - 1, 0) * cap;
+    var max = Math.max(total, 1);
+    var pct = total ? Math.round(left / total * 100) : 0;
+
+    var html = '<p class="rline">全部そろっていれば <strong>' + total.toLocaleString() +
+               '件</strong>。1台落ちると <strong>' + left.toLocaleString() +
+               '件</strong>（' + pct + '%）まで下がります。</p>';
+
+    html += '<div class="bars">';
+    html += '<div><p class="bar-label">通常時　' + nodes + '台 × ' + cap + '件</p>' +
+            '<div class="bar good"><span style="width:100%"></span></div></div>';
+    html += '<div><p class="bar-label">1台故障時　残り ' + Math.max(nodes - 1, 0) + '台</p>' +
+            '<div class="bar"><span style="width:' + (left / max * 100) + '%"></span></div></div>';
+    html += '</div>';
+
+    var msg;
+    if(nodes <= 1){
+      msg = '1台構成では、落ちた瞬間にゼロです。ロードバランサを置く以前に、まず2台目が必要な状態です。';
+    } else if(nodes === 2){
+      msg = '2台だと、1台落ちた時点で処理できる量が半分になります。ピーク時に耐えられるかを、実際の数字で確認しておきます。';
+    } else if(pct >= 75){
+      msg = '1台落ちても余裕があります。ただし、残った台に負荷が寄ることは変わらないので、ピーク時の値で考えます。';
+    } else {
+      msg = '1台落ちると、かなり細くなります。「動いてはいるが、遅くて使えない」がいちばん気づかれにくい障害です。';
+    }
+    html += '<p class="rline" style="margin:0">' + msg + '</p>';
+    res.innerHTML = html;
+  }
+
+  n.addEventListener("change", update);
+  c.addEventListener("change", update);
+  update();
+}
+
+var FLOW = [
+  {y:"①", n:"仮想サーバーで受ける", t:"サーバーのアドレスを直接教えると、<b>台数を変えるたびに全員へ連絡</b>することになる。", f:"利用者から見える入口を1つ作る。裏側が何台であっても、外から見えるのはこのアドレスだけ。"},
+  {y:"②", n:"暗号化を解く", t:"各サーバーに証明書を配ると、<b>更新のたびに全台まわる</b>ことになる。", f:"利用者との暗号化通信を入口で終わらせる。証明書の管理も、ここ1か所で済むようになる。"},
+  {y:"③", n:"渡す相手を決める", t:"順番に配るだけだと、<b>重い処理中の台にも同じように渡して</b>しまう。", f:"順番に配る、接続数が少ない台を選ぶなど、決められた方式で振り分け先を選ぶ。"},
+  {y:"④", n:"同じ人は、同じ台へ", t:"サーバーが利用者の状態を持っていると、振り分け先が変わった瞬間に<b>ログインが切れる</b>。", f:"必要なら、同じ利用者を同じサーバーへ送り続ける設定を入れる（パーシステンス）。"},
+  {y:"⑤", n:"返す。異常なら外す", t:"壊れた台に渡し続けると、<b>一部の利用者だけがエラー</b>になる。原因の特定がとても難しい。", f:"定期的に各サーバーへ声をかけ、返事がないものを振り分け先から自動で外す。復活したら、また戻す。"}
+];
+
+function buildFlow(){
+  var host = document.getElementById("tree-flow");
+  if(!host) return;
+  FLOW.forEach(function(s, i){
+    var wrap = document.createElement("div");
+    wrap.className = "step";
+    wrap.setAttribute("aria-expanded","false");
+    var btnId = "flow-btn-" + i, panId = "flow-pan-" + i;
+
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.id = btnId;
+    btn.setAttribute("aria-controls", panId);
+    btn.setAttribute("aria-expanded","false");
+    btn.innerHTML = '<span class="yr">' + s.y + '</span><span class="nm">' + s.n +
+                    '</span><span class="plus" aria-hidden="true"></span>';
+
+    var pan = document.createElement("div");
+    pan.className = "detail"; pan.id = panId; pan.hidden = true;
+    pan.setAttribute("role","region");
+    pan.setAttribute("aria-labelledby", btnId);
+    pan.innerHTML = '<p class="trouble">😖 これがないと：' + s.t + '</p>' +
+                    '<p class="fix">💡 やっていること：' + s.f + '</p>';
+
+    btn.addEventListener("click", function(){
+      var open = pan.hidden;
+      pan.hidden = !open;
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      wrap.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    wrap.appendChild(btn); wrap.appendChild(pan); host.appendChild(wrap);
+  });
+}
+
+var QUIZ = [
+  {
+    q:"利用者がアクセスしているアドレスは、どこのもの？",
+    c:["いちばん元気なサーバー","BIG-IPの仮想サーバー","データベース","社内のパソコン"],
+    a:1,
+    e:"利用者から見える入口は、BIG-IP上に作られた仮想サーバー（VIP）です。実際のサーバーのアドレスは外からは見えません。だから台数を自由に変えられます。"
+  },
+  {
+    q:"壊れたサーバーに、なぜアクセスが飛ばなくなる？",
+    c:["利用者が避けるから","定期的に生存確認しているから","サーバーが自分で申告するから","偶然"],
+    a:1,
+    e:"ヘルスモニターが定期的に声をかけ、返事のない台を振り分け先から外します。復活すれば自動で戻ります。人が気づく前に処理されるのが利点です。"
+  },
+  {
+    q:"「同じ利用者を同じサーバーへ送り続ける」設定を何という？",
+    c:["パーシステンス","バランシング","ルーティング","キャッシュ"],
+    a:0,
+    e:"サーバー側がログイン状態などを自分で抱えている場合、振り分け先が変わると壊れます。その対策がパーシステンスです。できれば状態を外に出すほうが望ましくはあります。"
+  },
+  {
+    q:"SSL終端を入口でやると、うれしいことは？",
+    c:["通信が速くなる","証明書の管理が1か所で済む","データが増える","サーバーが減る"],
+    a:1,
+    e:"各サーバーに証明書を配って更新して回る必要がなくなります。ただし、その1か所の期限切れが全体を止めるという裏返しもあります。"
+  },
+  {
+    q:"BIG-IPを入れるときに、いちばん気をつけることは？",
+    c:["色を選ぶこと","入口自身が単一障害点になること","置き場所の温度","名前の付け方"],
+    a:1,
+    e:"裏を何台に増やしても、入口が止まればすべて止まります。だから通常は2台1組で構成し、切り替わりが本当に動くかを事前に試しておきます。"
+  }
+];
+
+var qIndex = 0, qScore = 0;
+
+function renderQuiz(){
+  var host = document.getElementById("quiz");
+  if(!host) return;
+
+  if(qIndex >= QUIZ.length){
+    var msg = qScore === 5 ? "全問正解。もう人に説明できるレベル。"
+            : qScore >= 3 ? "いい線いってる。まちがえた問題ほど、覚えて帰れる。"
+            : "ここからが面白いところ。上の5ステップをもう一度ひらいてみよう。";
+    host.innerHTML = '<p class="score">結果：' + qScore + ' / ' + QUIZ.length + ' 問正解</p>' +
+                     '<p style="margin:0 0 14px">' + msg + '</p>' +
+                     '<button class="qnext" type="button" id="again">もう一度やる</button>';
+    document.getElementById("again").addEventListener("click", function(){
+      qIndex = 0; qScore = 0; renderQuiz();
+    });
+    return;
+  }
+
+  var item = QUIZ[qIndex];
+  var html = '<div class="qhead"><span class="qcount">第' + (qIndex+1) + '問 / ' + QUIZ.length + '問</span></div>' +
+             '<p class="qtext">' + item.q + '</p><div class="choices">';
+  item.c.forEach(function(text, i){
+    html += '<button class="choice" type="button" data-i="' + i + '">' + text + '</button>';
+  });
+  html += '</div><div class="answer" id="answer" hidden></div>';
+  host.innerHTML = html;
+
+  var buttons = host.querySelectorAll(".choice");
+  Array.prototype.forEach.call(buttons, function(b){
+    b.addEventListener("click", function(){
+      var picked = parseInt(b.dataset.i, 10);
+      var ok = picked === item.a;
+      if(ok) qScore++;
+
+      Array.prototype.forEach.call(buttons, function(x, i){
+        x.disabled = true;
+        if(i === item.a) x.classList.add("correct");
+        else if(i === picked) x.classList.add("wrong");
+      });
+
+      var ans = document.getElementById("answer");
+      ans.hidden = false;
+      ans.innerHTML = '<span class="verdict ' + (ok ? "ok" : "ng") + '">' +
+                      (ok ? "正解！" : "残念、正解は「" + item.c[item.a] + "」") + '</span>' +
+                      item.e +
+                      '<div><button class="qnext" type="button" id="next">' +
+                      (qIndex === QUIZ.length - 1 ? "結果を見る" : "次の問題へ") + '</button></div>';
+      document.getElementById("next").addEventListener("click", function(){
+        qIndex++; renderQuiz();
+      });
+      document.getElementById("next").focus();
+    });
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  document.getElementById("version").textContent = "v" + APP_VERSION;
+  initSwitch();
+  initCalc();
+  buildFlow();
+  renderQuiz();
+});
+</script>
+</body>
+</html>
