@@ -15,7 +15,7 @@
 
 <header class="topbar">
   <span class="logo">やさしい技術解説</span>
-  <span class="ver" id="version">v1.3.0</span>
+  <span class="ver" id="version">v1.4.0</span>
   <span class="from">用語集トップ</span>
 </header>
 
@@ -55,14 +55,14 @@
 <footer>
   <p>やさしい技術解説シリーズ。たとえ話・図解・クイズで、技術のことばを「なんのために生まれたか」から説明しています。</p>
   <p class="footmeta">最終更新日: 2026.9.7（各ページの参考文献は、それぞれのページ末尾に記載）</p>
-  <p class="footver">用語集トップ　v1.3.0</p>
+  <p class="footver">用語集トップ　v1.4.0</p>
 </footer>
 
 </div>
 
 <script>
 "use strict";
-var APP_VERSION = "1.3.0";
+var APP_VERSION = "1.4.0";
 
 /* ============ ページ一覧 ============ */
 var PAGES = [
@@ -125,6 +125,12 @@ var PAGES = [
     title:"Kubernetesのしくみ",
     q:"落ちたら、勝手に起き上がる。",
     meta:"手順ではなく、あるべき姿を書く。壊れる前提で直し続けるという発想。"
+  },
+  {
+    key:"aws", file:"aws.html", no:"11",
+    title:"AWSのしくみ",
+    q:"サーバーを、買わずに借りる。",
+    meta:"はじめに出会う4役、EC2・ECS・ELB・RDSから。必要なぶんだけ借りるという発想。"
   }
 ];
 
@@ -292,7 +298,29 @@ var TERMS = [
   {t:"ノード／クラスタ", read:"のーど", page:"k8s", anchor:"#words",
    d:"Podが実際に動くサーバー1台が「ノード」、それらをまとめた全体が「クラスタ」。"},
   {t:"スケジューラ", read:"すけじゅーら", page:"k8s", anchor:"#words",
-   d:"新しいPodをどのノードに置くか決める係。空き具合や条件を見て、置き場所を選ぶ。"}
+   d:"新しいPodをどのノードに置くか決める係。空き具合や条件を見て、置き場所を選ぶ。"},
+
+  /* --- AWS --- */
+  {t:"EC2", read:"EC2", page:"aws", anchor:"#ec2ecs",
+   d:"Elastic Compute Cloud。必要なときに借りられる仮想サーバー。OSから上は自分で面倒を見る、いちばん自由度の高い借り方。"},
+  {t:"ECS", read:"ECS", page:"aws", anchor:"#ec2ecs",
+   d:"Elastic Container Service。コンテナを「どこに何個動かすか」を決めて動かし続ける係。置き場としてEC2やFargateを使う。"},
+  {t:"ELB", read:"ELB", page:"aws", anchor:"#shape",
+   d:"Elastic Load Balancing。入口を1つに保ったまま、裏の台へアクセスを振り分けるしくみ。各台が生きているかも見張っている。"},
+  {t:"RDS", read:"RDS", page:"aws", anchor:"#shape",
+   d:"Relational Database Service。MySQLやPostgreSQLなどを、入れかえ・バックアップ・故障時の切りかえごと任せられる形で使えるサービス。"},
+  {t:"VPC", read:"VPC", page:"aws", anchor:"#words",
+   d:"AWSの中に用意する、自分専用のネットワーク区画。どのアドレスを外に出し、どれを内側に隠すかを決める土地の区割りにあたる。"},
+  {t:"S3", read:"S3", page:"aws", anchor:"#words",
+   d:"ファイルを置いておくための保管庫。画像やログ、バックアップなど「そのまま置いておきたいもの」の置き場として使う。"},
+  {t:"IAM", read:"IAM", page:"aws", anchor:"#words",
+   d:"誰が何をしてよいかを決めるしくみ。人にもプログラムにも鍵を配り、要る操作だけを許すのが基本の使い方。"},
+  {t:"リージョン／アベイラビリティゾーン（AZ）", read:"りーじょん", page:"aws", anchor:"#words",
+   d:"リージョンは東京・大阪といった地域のまとまり。その中にある独立した建物のかたまりがAZで、2か所以上に分けて置くのが基本。"},
+  {t:"マネージドサービス", read:"まねーじどさーびす", page:"aws", anchor:"#words",
+   d:"入れかえ・監視・バックアップといった世話をAWS側が引き受けてくれる形のサービス。自由度と引きかえに、手間を減らせる。"},
+  {t:"オートスケーリング", read:"おーとすけーりんぐ", page:"aws", anchor:"#calc",
+   d:"混み具合に応じて、台数を自動で増やしたり減らしたりするしくみ。ピークに合わせて常時そろえておく必要がなくなる。"}
 ];
 
 /* ============ 表示 ============ */
