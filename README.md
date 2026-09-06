@@ -1,6 +1,6 @@
 # やさしい技術解説シリーズ
 
-MCP・CI/CD・WebSocket・Flyway・Getdown・Angular・BIG-IP・Spring・Docker・Kubernetes・AWS を、
+MCP・CI/CD・WebSocket・Flyway・Getdown・Angular・BIG-IP・Spring・Docker・Kubernetes・AWS・NoSQL を、
 たとえ話・図解・クイズでたどるやさしい解説サイトです。
 
 ## 見る
@@ -14,9 +14,10 @@ GitHub Pages で公開する場合は、リポジトリの Settings → Pages �
 ## 構成
 
 ```
-index.html        トップページ（一覧＋横断用語索引）
+index.html        トップページ（更新情報＋一覧＋横断用語索引）
 mcp.html / cicd.html / websocket.html / flyway.html / getdown.html
-angular.html / bigip.html / spring.html / docker.html / kubernetes.html / aws.html
+angular.html / bigip.html / spring.html / docker.html / kubernetes.html
+aws.html / nosql.html
 assets/site.css   全ページ共通のスタイル
 ```
 
@@ -26,7 +27,8 @@ assets/site.css   全ページ共通のスタイル
 2. `index.html` 内の `PAGES` 配列に1エントリ追加する（ファイル名・タイトル・ひとこと説明）。
 3. 同じく `TERMS` 配列に、そのページの用語を追加する（`read` にひらがな読みを入れると索引が正しい位置に並ぶ）。
 4. 既存ページ末尾の `<section class="sibling">` に、新しいページへのリンクを足す（相互リンク）。
-5. フッターの説明文の下に `<p class="footmeta">最終更新日: YYYY.M.D ｜ 参考文献: <a href="...">...</a></p>` を必ず追加する。最終更新日はページを作成・更新した日、参考文献はそのページを書くときに実際に参照した公式ドキュメントなどのリンクを記載する。
+5. `index.html` 内の `NEWS` 配列の先頭に1件追加する（`date` ／ `type` は `new`・`update`・`release` のどれか ／ `body`）。トップページの「更新情報」に新しい順で並び、種別でしぼりこめます。`page` にページのキー（`PAGES` の `key`）を書くと、そのページの帯もつきます。
+6. フッターの説明文の下に `<p class="footmeta">最終更新日: YYYY.M.D ｜ 参考文献: <a href="...">...</a></p>` を必ず追加する。最終更新日はページを作成・更新した日、参考文献はそのページを書くときに実際に参照した公式ドキュメントなどのリンクを記載する。
 
 ## ライセンス・免責
 

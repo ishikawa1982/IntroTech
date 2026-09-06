@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>やさしい技術解説 — 用語集</title>
-<meta name="description" content="MCP・CI/CD・WebSocket を、たとえ話と図解とクイズでたどる解説シリーズ。各ページの用語をまとめた索引つき。">
+<meta name="description" content="MCP・CI/CD・WebSocket・NoSQL などを、たとえ話と図解とクイズでたどる解説シリーズ。更新情報と、各ページの用語をまとめた索引つき。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -15,7 +15,7 @@
 
 <header class="topbar">
   <span class="logo">やさしい技術解説</span>
-  <span class="ver" id="version">v1.4.0</span>
+  <span class="ver" id="version">v1.6.0</span>
   <span class="from">用語集トップ</span>
 </header>
 
@@ -25,6 +25,16 @@
   <h1>むずかしい言葉を、<br><span class="mark">たとえ話</span>にほどく。</h1>
   <p>言葉の意味だけ知っても、たいてい使えるようにはならない。「なんでそれが必要になったのか」まで一緒に読めるように作った解説シリーズです。下の索引からは、言葉を引いて、その場面の説明まで飛べます。</p>
 </div>
+
+<section id="news">
+  <h2>更新情報</h2>
+  <p class="lead">このサイトの変更履歴です。新しい順に並んでいます。<span class="pen" id="news-count"></span></p>
+  <div class="chips" id="news-chips"></div>
+  <div class="newsbox">
+    <ul class="newslist" id="newslist"></ul>
+  </div>
+  <div class="newsfoot" id="news-foot"></div>
+</section>
 
 <section id="pages">
   <h2>解説ページ</h2>
@@ -41,11 +51,12 @@
 
 <section id="howto">
   <h2>ページを増やすときは</h2>
-  <p class="lead">この3つを触れば、索引まで自動で更新されます。</p>
+  <p class="lead">この4つを触れば、カードも索引も自動で更新されます。</p>
   <ol class="steps">
     <li><b>解説ページを1枚作る。</b>既存の <code>websocket.html</code> を複製し、<code>&lt;link rel="stylesheet" href="assets/site.css"&gt;</code> はそのまま。見た目は自動でそろいます。</li>
     <li><b><code>index.html</code> の <code>PAGES</code> に1行足す。</b>ファイル名・タイトル・ひとこと説明・帯の色キーを書けば、カードが増えます。</li>
     <li><b>同じく <code>TERMS</code> に用語を足す。</b><code>read</code>（よみ）を書いておくと、あいうえお順の正しい位置に並びます。</li>
+    <li><b><code>NEWS</code> の先頭に1件足す。</b><code>date</code>・<code>type</code>（<code>new</code>／<code>update</code>／<code>release</code>）・<code>body</code> を書けば、ページ上部の「更新情報」に並びます。<code>page</code> にページのキーを書くと、その帯もつきます。</li>
   </ol>
   <p class="howto">CSSは <code>assets/site.css</code> の1枚だけ。全ページが同じものを読んでいるので、色や余白を変えたいときはここを直せば全体に反映されます。ファイルはすべて同じフォルダに置いたまま使ってください。</p>
 </section>
@@ -55,14 +66,39 @@
 <footer>
   <p>やさしい技術解説シリーズ。たとえ話・図解・クイズで、技術のことばを「なんのために生まれたか」から説明しています。</p>
   <p class="footmeta">最終更新日: 2026.9.7（各ページの参考文献は、それぞれのページ末尾に記載）</p>
-  <p class="footver">用語集トップ　v1.4.0</p>
+  <p class="footver">用語集トップ　v1.6.0</p>
 </footer>
 
 </div>
 
 <script>
 "use strict";
-var APP_VERSION = "1.4.0";
+var APP_VERSION = "1.6.0";
+
+/* ============ 更新情報 ============ */
+/* type は NEWS_TYPES のキー。page を書くと、そのページの帯が並びます（省略可） */
+var NEWS_TYPES = {
+  "new":     {label:"新規ページ", cls:"new"},
+  "update":  {label:"更新",       cls:""},
+  "release": {label:"公開",       cls:"release"}
+};
+
+var NEWS = [
+  {date:"2026.9.7", type:"update",
+   body:'更新情報に、種別のしぼりこみと「もっと見る」を足しました。件数が増えても、探している変更にたどりつけます。'},
+  {date:"2026.9.7", type:"new", page:"nosql",
+   body:'解説ページ「<a href="nosql.html">NoSQLのしくみ</a>」を追加しました。表をやめた理由と、そのかわりに何をゆずったのかまで。'},
+  {date:"2026.9.7", type:"update",
+   body:'トップページに、この「更新情報」を追加しました。何が新しくなったのかが、開いてすぐ分かります。'},
+  {date:"2026.9.6", type:"new", page:"aws",
+   body:'解説ページ「<a href="aws.html">AWSのしくみ</a>」を追加しました。はじめに出会う4役、EC2・ECS・ELB・RDSから。'},
+  {date:"2026.9.6", type:"update",
+   body:'全ページの末尾に、最終更新日と参考文献を書きました。いつの時点の情報なのかを確かめられます。'},
+  {date:"2026.9.6", type:"release",
+   body:'解説ページ10本（MCP／CI/CD／WebSocket／Flyway／Getdown／Angular／BIG-IP／Spring／Docker／Kubernetes）と、横断用語索引を公開しました。'}
+];
+
+var NEWS_STEP = 5;   /* 最初に見せる件数。これを超えるぶんは「もっと見る」の中へ */
 
 /* ============ ページ一覧 ============ */
 var PAGES = [
@@ -131,6 +167,12 @@ var PAGES = [
     title:"AWSのしくみ",
     q:"サーバーを、買わずに借りる。",
     meta:"はじめに出会う4役、EC2・ECS・ELB・RDSから。必要なぶんだけ借りるという発想。"
+  },
+  {
+    key:"nosql", file:"nosql.html", no:"12",
+    title:"NoSQLのしくみ",
+    q:"表の形に、こだわらない。",
+    meta:"表をやめた理由と、そのかわりに何をゆずったのか。4つの置き方のちがいから。"
   }
 ];
 
@@ -320,7 +362,29 @@ var TERMS = [
   {t:"マネージドサービス", read:"まねーじどさーびす", page:"aws", anchor:"#words",
    d:"入れかえ・監視・バックアップといった世話をAWS側が引き受けてくれる形のサービス。自由度と引きかえに、手間を減らせる。"},
   {t:"オートスケーリング", read:"おーとすけーりんぐ", page:"aws", anchor:"#calc",
-   d:"混み具合に応じて、台数を自動で増やしたり減らしたりするしくみ。ピークに合わせて常時そろえておく必要がなくなる。"}
+   d:"混み具合に応じて、台数を自動で増やしたり減らしたりするしくみ。ピークに合わせて常時そろえておく必要がなくなる。"},
+
+  /* --- NoSQL --- */
+  {t:"NoSQL", read:"NoSQL", page:"nosql", anchor:"",
+   d:"表の形にこだわらないデータベースの総称。Not only SQL（SQLだけじゃない）と読むのが今の一般的な理解。"},
+  {t:"RDB", read:"RDB", page:"nosql", anchor:"#words",
+   d:"行と列の表でデータを持ち、表どうしをつないで使うデータベース。長いあいだ、データベースといえばこれだった。"},
+  {t:"ドキュメント", read:"どきゅめんと", page:"nosql", anchor:"#kinds",
+   d:"1件ぶんのデータを、入れ子のある1つのかたまりで表したもの。JSONのような形をしている。"},
+  {t:"キー・バリュー", read:"きーばりゅー", page:"nosql", anchor:"#kinds",
+   d:"合言葉（キー）を渡すと中身（バリュー）が返る、いちばん単純な置き方。中身で探すことはできない。"},
+  {t:"シャーディング", read:"しゃーでぃんぐ", page:"nosql", anchor:"#words",
+   d:"データをキーで分けて、複数の台に振り分けること。台数を増やして量をさばくための基本のやり方。"},
+  {t:"レプリケーション", read:"れぷりけーしょん", page:"nosql", anchor:"#words",
+   d:"同じデータの写しを、別の台にも持つこと。1台が落ちても読み書きを続けられるようにする。"},
+  {t:"結果整合性", read:"けっかせいごうせい", page:"nosql", anchor:"#words",
+   d:"書いた直後はバラつくが、しばらくすれば全部の台で同じになる、という考え方。すぐ揃うことをあきらめる代わりに、止まりにくくする。"},
+  {t:"スキーマレス", read:"すきーまれす", page:"nosql", anchor:"#terms",
+   d:"データの形をデータベース側で決めておかないこと。チェックしてくれないだけで、形の管理はアプリ側の仕事になる。"},
+  {t:"ホットスポット", read:"ほっとすぽっと", page:"nosql", anchor:"#careful",
+   d:"分けたはずのアクセスが、特定の1台に集中してしまう状態。キーの選び方をまちがえると起きる。"},
+  {t:"CAP定理", read:"CAP", page:"nosql", anchor:"#words",
+   d:"ネットワークが分断されたとき、「全部の台で同じ答え」と「止まらないこと」は同時に満たせない、という整理。"}
 ];
 
 /* ============ 表示 ============ */
@@ -351,6 +415,87 @@ function pageOf(key){
     if(PAGES[i].key === key) return PAGES[i];
   }
   return null;
+}
+
+var newsFilter = "all";   /* "all" または NEWS_TYPES のキー */
+var newsOpen = false;     /* もっと見るを開いているか */
+
+/* "2026.9.7" を比べられる数値にする */
+function newsDateKey(d){
+  var a = d.split(".");
+  return parseInt(a[0], 10) * 10000 + parseInt(a[1], 10) * 100 + parseInt(a[2], 10);
+}
+
+function newsItems(){
+  return NEWS.filter(function(n){ return newsFilter === "all" || n.type === newsFilter; });
+}
+
+function renderNewsChips(){
+  var host = document.getElementById("news-chips");
+  if(!host) return;
+
+  var list = [{k:"all", label:"すべて", n:NEWS.length}];
+  Object.keys(NEWS_TYPES).forEach(function(k){
+    var n = NEWS.filter(function(x){ return x.type === k; }).length;
+    if(n) list.push({k:k, label:NEWS_TYPES[k].label, n:n});
+  });
+
+  host.innerHTML = list.map(function(c){
+    return '<button type="button" data-k="' + c.k + '" aria-pressed="' +
+           (c.k === newsFilter ? "true" : "false") + '">' + c.label + ' ' + c.n + '</button>';
+  }).join("");
+
+  Array.prototype.forEach.call(host.querySelectorAll("button"), function(b){
+    b.addEventListener("click", function(){
+      newsFilter = b.dataset.k;
+      newsOpen = false;
+      renderNewsChips();
+      renderNews();
+    });
+  });
+}
+
+function renderNews(){
+  var host = document.getElementById("newslist");
+  if(!host) return;
+
+  var items = newsItems();
+  var shown = newsOpen ? items : items.slice(0, NEWS_STEP);
+
+  var newest = 0;
+  NEWS.forEach(function(n){ newest = Math.max(newest, newsDateKey(n.date)); });
+
+  host.innerHTML = shown.map(function(n){
+    var t = NEWS_TYPES[n.type] || {label:n.type, cls:""};
+    var p = n.page ? pageOf(n.page) : null;
+    return '<li>' +
+             '<span class="date">' + n.date + '</span>' +
+             (newsDateKey(n.date) === newest ? '<span class="newmark">NEW</span>' : '') +
+             '<span class="tag ' + t.cls + '">' + t.label + '</span>' +
+             (p ? '<span class="src ' + n.page + '">' + p.title.replace("のしくみ","") + '</span>' : '') +
+             '<span class="body">' + n.body + '</span>' +
+           '</li>';
+  }).join("") || '<li><span class="none">この種別の更新は、まだありません。</span></li>';
+
+  document.getElementById("news-count").textContent = newsFilter === "all"
+    ? "全 " + NEWS.length + " 件"
+    : NEWS_TYPES[newsFilter].label + " " + items.length + " 件 ／ 全 " + NEWS.length + " 件";
+
+  var foot = document.getElementById("news-foot");
+  if(items.length > NEWS_STEP){
+    foot.innerHTML = '<button class="newsmore" type="button" id="news-more" aria-controls="newslist" aria-expanded="' +
+                     (newsOpen ? "true" : "false") + '">' +
+                     (newsOpen ? "最新の " + NEWS_STEP + " 件だけ表示"
+                               : "のこり " + (items.length - NEWS_STEP) + " 件を見る") +
+                     '</button>';
+    document.getElementById("news-more").addEventListener("click", function(){
+      newsOpen = !newsOpen;
+      renderNews();
+      document.getElementById("news-more").focus();
+    });
+  }else{
+    foot.innerHTML = "";
+  }
 }
 
 function renderCards(){
@@ -429,6 +574,8 @@ document.addEventListener("DOMContentLoaded", function(){
   document.getElementById("version").textContent = "v" + APP_VERSION;
   document.getElementById("term-count").textContent =
     "全 " + TERMS.length + " 語 ／ " + PAGES.length + " ページ分";
+  renderNewsChips();
+  renderNews();
   renderCards();
   renderChips();
   renderIndex();
