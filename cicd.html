@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CI/CDのしくみ — 直したものが、こわがらずに届くまで</title>
+<meta name="description" content="CI/CD（継続的インテグレーション／継続的デリバリー）を、身近なたとえ話・図解・クイズでたどるやさしい解説ページ。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="topbar">
+  <span class="logo">CI/CDのしくみ</span>
+  <span class="ver" id="version">v1.0.0</span>
+  <a class="home" href="index.html">← 用語集トップ</a>
+</header>
+
+<main>
+
+<div class="hero">
+  <h1>直したものを、<br><span class="mark">こわがらずに</span>届けるために。</h1>
+  <p>アプリの不具合を直した。でも、それを本当にみんなのスマホに届けるのは、けっこうこわい。直したつもりが、別のところを壊しているかもしれないからだ。そのこわさを減らすために、ロボットに毎回チェックさせるしくみが <strong>CI/CD</strong>。</p>
+
+  <div class="chain">
+    <p class="chain-title">きみがコードを1行直してから、みんなに届くまで——</p>
+    <ol>
+      <li>
+        <span class="node now">直す<small>いま</small></span>
+        <span class="say">バグを見つけて、1行書きかえた</span>
+      </li>
+      <li class="arrowline">保存して送る</li>
+      <li>
+        <span class="node">コミット<small>置き場に届く</small></span>
+        <span class="say">みんなで共有している保管庫に入る</span>
+      </li>
+      <li class="arrowline">ロボットが気づく</li>
+      <li>
+        <span class="node robot">CI<small>自動でチェック</small></span>
+        <span class="say">組み立てて、全部の動作テストを走らせる</span>
+      </li>
+      <li class="arrowline">合格したら</li>
+      <li>
+        <span class="node robot">CD<small>自動でお届け</small></span>
+        <span class="say">本物の場所へ、決まった手順どおりに置く</span>
+      </li>
+      <li class="arrowline">そして</li>
+      <li>
+        <span class="node goal">みんなの画面<small>10分後</small></span>
+        <span class="say">直したものが、もう使われている</span>
+      </li>
+    </ol>
+  </div>
+  <p class="lead" style="margin-bottom:0">人がやっていた「確認」と「配る」を、機械に毎回やらせる。<span class="pen">これだけ</span>のことだけど、効き方がすごい。</p>
+</div>
+
+<section id="why">
+  <h2>なんで、こんなしくみが生まれたの？</h2>
+  <p class="lead">答えはシンプル。<span class="mark pink">まとめてやると、こわいから。</span></p>
+
+  <div class="notes">
+    <div class="note">
+      <h3>夏休みの宿題を、最終日にやる問題</h3>
+      <p>毎日少しずつやれば、まちがえてもその日のうちに気づける。40日ぶんためて最終日にやると、どこでまちがえたのか、もうわからない。</p>
+      <p class="eg">昔のソフト開発はこれだった。3か月ぶんの直しをまとめて出して、動かなくなってから犯人さがしを始める。</p>
+    </div>
+
+    <div class="note">
+      <h3>人は、かならずまちがえる</h3>
+      <p>「手順書の12番のコピーを忘れた」「本番用の設定に書きかえるのを忘れた」。夜中の作業なら、なおさら起きる。</p>
+      <p class="eg">機械は飽きないし、眠くもならない。同じ手順を1万回、同じようにやる。得意分野がちがう。</p>
+    </div>
+
+    <div class="note">
+      <h3>こわいから、直さなくなる</h3>
+      <p>いちばん困るのはここ。届けるのがこわい作業だと、人は「まとめてからにしよう」と後回しにする。すると、また量が増えてもっとこわくなる。</p>
+      <p class="eg">CI/CDは、この悪循環を逆に回す。小さく出せる → こわくない → もっと小さく出せる。</p>
+    </div>
+  </div>
+</section>
+
+<section id="compare">
+  <h2>出し方を、くらべてみる</h2>
+  <p class="lead">ボタンで切りかえて、届け方のちがいを見てみよう。</p>
+
+  <div class="board">
+    <div class="switch">
+      <button type="button" id="btn-old" aria-pressed="true">まとめて出す</button>
+      <button type="button" id="btn-new" aria-pressed="false">こまめに出す</button>
+    </div>
+    <p class="tally" id="tally">3か月ためて、<b>1回</b> どーんと出す</p>
+    <figure style="margin:0">
+      <svg viewBox="0 0 600 240" role="img" aria-label="3か月ぶんをためて一度に出すやり方と、毎日小さく出すやり方を比べた図">
+        <g font-family="'Zen Maru Gothic',sans-serif">
+          <line x1="30" y1="196" x2="570" y2="196" stroke="#16263F" stroke-width="2"/>
+          <g fill="#54677E" font-size="12" font-family="'Zen Kaku Gothic New',sans-serif">
+            <text x="30" y="218">1か月目</text>
+            <text x="210" y="218">2か月目</text>
+            <text x="390" y="218">3か月目</text>
+          </g>
+          <line x1="210" y1="188" x2="210" y2="204" stroke="#C3D2DE" stroke-width="2"/>
+          <line x1="390" y1="188" x2="390" y2="204" stroke="#C3D2DE" stroke-width="2"/>
+
+          <g id="view-old">
+            <rect x="30" y="150" width="470" height="44" rx="8" fill="#F2F5F8" stroke="#C3D2DE" stroke-width="2" stroke-dasharray="6 5"/>
+            <text x="265" y="178" text-anchor="middle" font-size="14" fill="#54677E" font-family="'Zen Kaku Gothic New',sans-serif">直したものを、ずっとためておく</text>
+            <rect x="504" y="40" width="66" height="154" rx="8" fill="#FFB3CE" stroke="#16263F" stroke-width="2"/>
+            <text x="537" y="120" text-anchor="middle" font-size="15" font-weight="700" fill="#16263F">3か月</text>
+            <text x="537" y="140" text-anchor="middle" font-size="15" font-weight="700" fill="#16263F">ぶん</text>
+            <text x="537" y="28" text-anchor="middle" font-size="26" fill="#E4453A">!</text>
+            <text x="300" y="72" text-anchor="middle" font-size="15" font-weight="700" fill="#E4453A">動かない → どの直しが原因？</text>
+            <text x="300" y="98" text-anchor="middle" font-size="13" fill="#54677E" font-family="'Zen Kaku Gothic New',sans-serif">候補が何百個もあって、さがすだけで何日もかかる</text>
+          </g>
+
+          <g id="view-new" class="hidden">
+            <g fill="#AEE6A6" stroke="#16263F" stroke-width="2">
+              <rect x="34" y="164" width="26" height="30" rx="5"/>
+              <rect x="79" y="164" width="26" height="30" rx="5"/>
+              <rect x="124" y="164" width="26" height="30" rx="5"/>
+              <rect x="169" y="164" width="26" height="30" rx="5"/>
+              <rect x="214" y="164" width="26" height="30" rx="5"/>
+              <rect x="259" y="164" width="26" height="30" rx="5"/>
+              <rect x="304" y="164" width="26" height="30" rx="5"/>
+              <rect x="349" y="164" width="26" height="30" rx="5"/>
+              <rect x="394" y="164" width="26" height="30" rx="5"/>
+              <rect x="439" y="164" width="26" height="30" rx="5"/>
+              <rect x="484" y="164" width="26" height="30" rx="5"/>
+            </g>
+            <rect x="529" y="164" width="26" height="30" rx="5" fill="#FFB3CE" stroke="#16263F" stroke-width="2"/>
+            <text x="542" y="156" text-anchor="middle" font-size="20" fill="#E4453A">!</text>
+            <text x="300" y="72" text-anchor="middle" font-size="15" font-weight="700" fill="#1E8A4C">動かない → 直前の1個が原因</text>
+            <text x="300" y="98" text-anchor="middle" font-size="13" fill="#54677E" font-family="'Zen Kaku Gothic New',sans-serif">候補は1個だけ。すぐ元に戻せるし、すぐ直せる</text>
+            <text x="300" y="128" text-anchor="middle" font-size="13" fill="#54677E" font-family="'Zen Kaku Gothic New',sans-serif">緑のひとつひとつが、ロボットの合格をもらった小さな直し</text>
+          </g>
+        </g>
+      </svg>
+      <figcaption>小さく出すのは、こまめに出したいからじゃない。<strong>まちがえたときに、犯人が1人に決まるから</strong>。これがCI/CDの本当のねらい。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="calc">
+  <h2>手作業だと、どれくらい時間がかかる？</h2>
+  <p class="lead">1日に出す回数と、1回の手作業の時間を選ぶと、1か月ぶんを計算する。</p>
+  <div class="calcbox">
+    <div class="calcrow">
+      <div>
+        <label for="times">1日に出す回数</label>
+        <select id="times"></select>
+      </div>
+      <div>
+        <label for="mins">手作業1回の時間</label>
+        <select id="mins"></select>
+      </div>
+    </div>
+    <div class="result" id="calc-result"></div>
+  </div>
+</section>
+
+<section id="pipeline">
+  <h2>パイプラインの中を、開いて確かめる</h2>
+  <p class="lead">コミットしてから届くまでの5つの部屋。<span class="pen">前半がCI、後半がCD</span>だと思っておけばいい。</p>
+
+  <div class="tree">
+    <h3>ロボットが順番にやっていること</h3>
+    <div class="step-list" id="tree-pipe"></div>
+  </div>
+</section>
+
+<section id="cicd">
+  <h2>結局、CIとCDって何がちがうの？</h2>
+  <p class="lead">名前が似ていて、いちばんこんがらがるところ。</p>
+  <div class="notes">
+    <div class="note">
+      <h3>CI ＝ 集めて、確かめる</h3>
+      <p>Continuous Integration（継続的インテグレーション）。みんなが書いた直しをこまめに1か所に集めて、そのたびに<span class="mark cyan">組み立て＋テスト</span>を自動で走らせる。</p>
+      <p class="eg">合言葉は「壊れていないことを、毎回たしかめる」。ここまでは、まだ誰にも届いていない。</p>
+    </div>
+    <div class="note">
+      <h3>CD ＝ 届けられる状態にする</h3>
+      <p>Continuous Delivery（継続的デリバリー）。合格したものを、いつでも本番へ出せる状態まで自動で運ぶ。最後のボタンだけ人が押す形が多い。</p>
+      <p class="eg">Continuous Deployment（継続的デプロイ）はもう一段先で、その最後のボタンも自動。同じ「CD」でも、意味が2つある。</p>
+    </div>
+    <div class="note">
+      <h3>ならべると、ただの一本道</h3>
+      <p>コミット → 組み立て → テスト ここまでが CI。テスト合格 → 検証の場所へ → 本番へ ここからが CD。</p>
+      <p class="eg">2つの別ものというより、1本のベルトコンベアの前半と後半。だから、まとめて CI/CD と呼ばれる。</p>
+    </div>
+  </div>
+</section>
+
+<section id="quiz">
+  <h2>クイズ：きみは何問わかる？</h2>
+  <p class="lead">全5問。まちがえても大丈夫、答えのほうが面白い。</p>
+  <div class="quiz" id="quiz"></div>
+</section>
+
+<section id="careful">
+  <h2>気をつけないと、意味がなくなる</h2>
+  <p class="lead">入れただけで安心してしまうと、ただの遅い機械になる。</p>
+  <ol class="steps">
+    <li><b>テストがなければ、ただの自動配達。</b>CIの価値は「壊れていないと確かめる」ところにある。中身のないテストを走らせても、こわさは減らない。</li>
+    <li><b>赤くなったら、まず直す。</b>テストが落ちたまま次の作業を進めると、誰も結果を見なくなる。そうなった時点でしくみは死ぬ。</li>
+    <li><b>遅いと、誰も待たなくなる。</b>結果が出るまで1時間かかると、確認せずに次へ行ってしまう。速さもちゃんと大事な機能。</li>
+    <li><b>戻せるようにしておく。</b>出したものが壊れていたとき、すぐ前の状態に戻せるか。前に進む道と同じくらい、戻る道が大事。</li>
+    <li><b>パスワードは、コードに書かない。</b>自動化するほど、鍵の置き場所が問題になる。専用の金庫のしくみに預ける。</li>
+  </ol>
+</section>
+
+<section id="words">
+  <h2>ことばのミニ辞典</h2>
+  <p class="lead">この先どこかで見かけたときのために。</p>
+  <dl class="words">
+    <dt>コミット</dt>
+    <dd>直した内容を「ここまでできた」と記録して、共有の保管庫に置くこと。CI/CDは、たいていこれが合図で動きだす。</dd>
+    <dt>ビルド</dt>
+    <dd>人が書いた文字の状態から、コンピュータが実行できる形に組み立てること。プラモデルの部品を、説明書どおりに組む作業に近い。</dd>
+    <dt>パイプライン</dt>
+    <dd>組み立て・テスト・配置といった作業を、順番につないだ一本道。工場のベルトコンベアだと思えばいい。</dd>
+    <dt>デプロイ</dt>
+    <dd>できあがったものを、実際に動く場所へ置くこと。「本番にデプロイする」＝みんなが使う場所に届ける。</dd>
+    <dt>ロールバック</dt>
+    <dd>出したものに問題があったとき、ひとつ前の状態に戻すこと。CI/CDでは、これが素早くできることが安心のもとになる。</dd>
+  </dl>
+</section>
+
+<section class="sibling">
+  <h2>ほかの解説ページ</h2>
+  <ul>
+    <li><a href="mcp.html"><b>MCPのしくみ</b><span>AIは、外の道具を借りて動いている。</span></a></li>
+    <li><a href="websocket.html"><b>WebSocketのしくみ</b><span>「まだ？」と聞きに行かなくてよくなった日。</span></a></li>
+    <li><a href="flyway.html"><b>Flywayのしくみ</b><span>データベースだけ、やり直しがきかない。</span></a></li>
+    <li><a href="getdown.html"><b>Getdownのしくみ</b><span>配ったあとに、直せるようにする。</span></a></li>
+    <li><a href="angular.html"><b>Angularのしくみ</b><span>画面を、部品に切り分ける。</span></a></li>
+    <li><a href="bigip.html"><b>BIG-IPのしくみ</b><span>入口を1つにして、裏を何台にでも。</span></a></li>
+    <li><a href="spring.html"><b>Springのしくみ</b><span>部品の組み立てを、任せてしまう。</span></a></li>
+    <li><a href="docker.html"><b>Dockerのしくみ</b><span>「私のPCでは動く」を、なくすために。</span></a></li>
+    <li><a href="kubernetes.html"><b>Kubernetesのしくみ</b><span>落ちたら、勝手に起き上がる。</span></a></li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <p>CI/CD（継続的インテグレーション／継続的デリバリー）を、たとえ話・図解・クイズでたどるやさしい解説ページです。実際の道具の使い方は、それぞれの公式ドキュメントをどうぞ。</p>
+  <p class="footver">CI/CDのしくみ　v1.0.0</p>
+</footer>
+
+</div>
+
+<script>
+"use strict";
+var APP_VERSION = "1.0.0";
+
+/* ============ 出し方の切りかえ ============ */
+function initSwitch(){
+  var oldV = document.getElementById("view-old");
+  var newV = document.getElementById("view-new");
+  var oBtn = document.getElementById("btn-old");
+  var nBtn = document.getElementById("btn-new");
+  var tally = document.getElementById("tally");
+  if(!oldV || !newV) return;
+
+  function show(isOld){
+    oldV.classList.toggle("hidden", !isOld);
+    newV.classList.toggle("hidden", isOld);
+    oBtn.setAttribute("aria-pressed", isOld ? "true" : "false");
+    nBtn.setAttribute("aria-pressed", isOld ? "false" : "true");
+    tally.innerHTML = isOld
+      ? '3か月ためて、<b>1回</b> どーんと出す'
+      : '毎週すこしずつ、<b>12回</b> に分けて出す';
+  }
+  oBtn.addEventListener("click", function(){ show(true); });
+  nBtn.addEventListener("click", function(){ show(false); });
+}
+
+/* ============ 手作業の時間の計算 ============ */
+function initCalc(){
+  var t = document.getElementById("times");
+  var m = document.getElementById("mins");
+  var res = document.getElementById("calc-result");
+  if(!t || !m || !res) return;
+
+  [1,2,3,5,8,10,15,20].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v + "回";
+    if(v === 5) o.selected = true;
+    t.appendChild(o);
+  });
+  [5,10,15,20,30,45,60].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v + "分";
+    if(v === 15) o.selected = true;
+    m.appendChild(o);
+  });
+
+  function update(){
+    var times = parseInt(t.value, 10);
+    var mins = parseInt(m.value, 10);
+    var days = 20;
+    var manual = times * mins * days;
+    var auto = Math.round(times * days * 0.5);
+    var saved = manual - auto;
+    var max = Math.max(manual, 1);
+
+    function hm(x){
+      var h = Math.floor(x / 60), mm = x % 60;
+      return (h > 0 ? h + "時間" : "") + (mm > 0 || h === 0 ? mm + "分" : "");
+    }
+
+    var html = '<p class="rline">1か月（20日ぶん）で、手作業なら <strong>' + hm(manual) +
+               '</strong>。自動なら人が使う時間は <strong>' + hm(auto) + '</strong> ほど。</p>';
+
+    html += '<div class="bars">';
+    html += '<div><p class="bar-label">手作業　' + times + '回 × ' + mins + '分 × 20日</p>' +
+            '<div class="bar"><span style="width:100%"></span></div></div>';
+    html += '<div><p class="bar-label">自動　ボタンを押して結果を見るだけ</p>' +
+            '<div class="bar good"><span style="width:' + Math.max(auto / max * 100, 2) + '%"></span></div></div>';
+    html += '</div>';
+
+    html += '<p class="rline" style="margin:0">浮くのは1か月で <strong>' + hm(saved) +
+            '</strong>。ただし、しくみを作る手間が最初に1回かかる。' +
+            (manual >= 600
+              ? 'ここまで差があるなら、作る手間はすぐ取り返せる。'
+              : '回数が少ないうちは、時間より「まちがえない」ことのほうが得になる。') + '</p>';
+
+    res.innerHTML = html;
+  }
+
+  t.addEventListener("change", update);
+  m.addEventListener("change", update);
+  update();
+}
+
+/* ============ パイプライン ============ */
+var PIPE = [
+  {y:"CI", cd:false, n:"① コミットを受けとる", t:"人が「そろそろテストしよう」と思い出すまで、<b>誰もチェックしない</b>。", f:"保管庫に直しが届いた瞬間、ロボットが自動で気づいて動きだす。人が忘れても止まらない。"},
+  {y:"CI", cd:false, n:"② 組み立てる（ビルド）", t:"「自分のパソコンでは動いたのに」で終わってしまう。<b>環境ごとに結果がちがう</b>。", f:"毎回まっさらな場所で、決まった手順で組み立て直す。ここで失敗すれば、書きまちがいがすぐわかる。"},
+  {y:"CI", cd:false, n:"③ テストを走らせる", t:"直した所は確かめても、<b>関係ないと思っていた所</b>が壊れていることに気づけない。", f:"用意しておいた何百個の確認を、毎回ぜんぶ自動で走らせる。ここがCIのいちばんおいしいところ。"},
+  {y:"CD", cd:true, n:"④ 検証の場所に置く", t:"いきなり本番に出すのはこわい。かといって、手で用意した確認環境は<b>本番と微妙にちがう</b>。", f:"本番とそっくりの場所へ自動で置いて、実際の画面で最終確認する。リハーサル会場のようなもの。"},
+  {y:"CD", cd:true, n:"⑤ 本番に届ける", t:"深夜の手作業。手順書の1行を飛ばすと、<b>お客さんの画面が真っ白</b>になる。", f:"同じ手順を機械が実行する。問題が出たら、すぐ前の状態に戻す道もあらかじめ用意しておく。"}
+];
+
+function buildPipe(){
+  var host = document.getElementById("tree-pipe");
+  if(!host) return;
+  PIPE.forEach(function(s, i){
+    var wrap = document.createElement("div");
+    wrap.className = "step";
+    wrap.setAttribute("aria-expanded","false");
+
+    var btnId = "pipe-btn-" + i;
+    var panId = "pipe-pan-" + i;
+
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = btnId;
+    btn.setAttribute("aria-controls", panId);
+    btn.setAttribute("aria-expanded","false");
+    btn.innerHTML = '<span class="yr' + (s.cd ? " cd" : "") + '">' + s.y + '</span><span class="nm">' + s.n +
+                    '</span><span class="plus" aria-hidden="true"></span>';
+
+    var pan = document.createElement("div");
+    pan.className = "detail";
+    pan.id = panId;
+    pan.hidden = true;
+    pan.setAttribute("role","region");
+    pan.setAttribute("aria-labelledby", btnId);
+    pan.innerHTML = '<p class="trouble">😖 これがないと：' + s.t + '</p>' +
+                    '<p class="fix">💡 ロボットの仕事：' + s.f + '</p>';
+
+    btn.addEventListener("click", function(){
+      var open = pan.hidden;
+      pan.hidden = !open;
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      wrap.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    wrap.appendChild(btn);
+    wrap.appendChild(pan);
+    host.appendChild(wrap);
+  });
+}
+
+/* ============ クイズ ============ */
+var QUIZ = [
+  {
+    q:"CIの「I」は、何のI？",
+    c:["Install（入れる）","Integration（集めて合わせる）","Internet（ネット）","Improve（よくする）"],
+    a:1,
+    e:"Continuous Integration。みんなが書いた直しを、こまめに1か所へ集めて合わせること。集めるたびに自動で組み立ててテストする、というのがCIの中身。"
+  },
+  {
+    q:"小さく、こまめに出すいちばんの理由は？",
+    c:["まちがえたとき、原因が1個に決まるから","上司によく見えるから","サーバーが安くなるから","コードが短くなるから"],
+    a:0,
+    e:"3か月ぶんをまとめて出すと、壊れたとき候補が何百個にもなる。1個ずつ出していれば、犯人はいつも直前の1個。戻すのも簡単になる。"
+  },
+  {
+    q:"テストが落ちて赤くなった。まずどうする？",
+    c:["気にせず次の作業を進める","とりあえずテストを消す","最優先で直す","来週まとめて見る"],
+    a:2,
+    e:"赤いまま放っておくと、誰も結果を見なくなる。そうなった瞬間にCIは飾りになる。「赤は止まれ」を守れるかどうかが、成功と失敗の分かれ目。"
+  },
+  {
+    q:"CIとCDの境目は、だいたいどこ？",
+    c:["朝と夜のあいだ","テストに合格したところ","コードを書きはじめたところ","会議で決めたところ"],
+    a:1,
+    e:"集めてテストするまでがCI、合格したものを実際の場所へ運ぶのがCD。1本のベルトコンベアの前半と後半、という関係。"
+  },
+  {
+    q:"CI/CDを入れると、いちばん変わることは？",
+    c:["プログラムが速くなる","バグがゼロになる","直して届けるのが、こわくなくなる","コードを書かなくてよくなる"],
+    a:2,
+    e:"バグがゼロになるわけでも、プログラムが速くなるわけでもない。変わるのは「出すのがこわい」という気持ちのほう。こわくないから小さく出せて、小さく出すからもっとこわくなくなる。"
+  }
+];
+
+var qIndex = 0, qScore = 0;
+
+function renderQuiz(){
+  var host = document.getElementById("quiz");
+  if(!host) return;
+
+  if(qIndex >= QUIZ.length){
+    var msg = qScore === 5 ? "全問正解。もう人に説明できるレベル。"
+            : qScore >= 3 ? "いい線いってる。まちがえた問題ほど、覚えて帰れる。"
+            : "ここからが面白いところ。上のパイプラインをもう一度ひらいてみよう。";
+    host.innerHTML = '<p class="score">結果：' + qScore + ' / ' + QUIZ.length + ' 問正解</p>' +
+                     '<p style="margin:0 0 14px">' + msg + '</p>' +
+                     '<button class="qnext" type="button" id="again">もう一度やる</button>';
+    document.getElementById("again").addEventListener("click", function(){
+      qIndex = 0; qScore = 0; renderQuiz();
+    });
+    return;
+  }
+
+  var item = QUIZ[qIndex];
+  var html = '<div class="qhead"><span class="qcount">第' + (qIndex+1) + '問 / ' + QUIZ.length + '問</span></div>' +
+             '<p class="qtext">' + item.q + '</p><div class="choices">';
+  item.c.forEach(function(text, i){
+    html += '<button class="choice" type="button" data-i="' + i + '">' + text + '</button>';
+  });
+  html += '</div><div class="answer" id="answer" hidden></div>';
+  host.innerHTML = html;
+
+  var buttons = host.querySelectorAll(".choice");
+  Array.prototype.forEach.call(buttons, function(b){
+    b.addEventListener("click", function(){
+      var picked = parseInt(b.dataset.i, 10);
+      var ok = picked === item.a;
+      if(ok) qScore++;
+
+      Array.prototype.forEach.call(buttons, function(x, i){
+        x.disabled = true;
+        if(i === item.a) x.classList.add("correct");
+        else if(i === picked) x.classList.add("wrong");
+      });
+
+      var ans = document.getElementById("answer");
+      ans.hidden = false;
+      ans.innerHTML = '<span class="verdict ' + (ok ? "ok" : "ng") + '">' +
+                      (ok ? "正解！" : "残念、正解は「" + item.c[item.a] + "」") + '</span>' +
+                      item.e +
+                      '<div><button class="qnext" type="button" id="next">' +
+                      (qIndex === QUIZ.length - 1 ? "結果を見る" : "次の問題へ") + '</button></div>';
+      document.getElementById("next").addEventListener("click", function(){
+        qIndex++; renderQuiz();
+      });
+      document.getElementById("next").focus();
+    });
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  document.getElementById("version").textContent = "v" + APP_VERSION;
+  initSwitch();
+  initCalc();
+  buildPipe();
+  renderQuiz();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Springのしくみ — 部品の組み立てを、任せる</title>
+<meta name="description" content="Spring / Spring Boot（Javaのフレームワーク）を、たとえ話・図解・クイズでたどるやさしい解説ページ。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="topbar">
+  <span class="logo">Springのしくみ</span>
+  <span class="ver" id="version">v1.0.0</span>
+  <a class="home" href="index.html">← 用語集トップ</a>
+</header>
+
+<main>
+
+<div class="hero" id="basic">
+  <h1>部品の<span class="mark">組み立て</span>を、<br>任せてしまう。</h1>
+  <p>注文の処理を書きたいだけなのに、その前にデータベースの接続を用意して、設定を読み込んで、後始末を書いて……という準備が延々と続く。<strong>Spring</strong> は、その準備と組み立てを引き受ける係です。使う側は「これが要る」と書くだけでよくなります。</p>
+
+  <div class="chain">
+    <p class="chain-title">注文サービスが、動きだすまで——</p>
+    <ol>
+      <li>
+        <span class="node now">「これが要る」と書く<small>いま</small></span>
+        <span class="say">注文の処理には、注文リポジトリが必要だと宣言する</span>
+      </li>
+      <li class="arrowline">起動時に</li>
+      <li>
+        <span class="node robot">Springが探す<small>自動</small></span>
+        <span class="say">目印のついたクラスを集めて、一覧を作る</span>
+      </li>
+      <li class="arrowline">順番を考えて</li>
+      <li>
+        <span class="node">組み立てて渡す<small>差し込む</small></span>
+        <span class="say">必要なものを先に作り、それを渡しながら作っていく</span>
+      </li>
+      <li class="arrowline">できあがると</li>
+      <li>
+        <span class="node goal">使う側はnewしない<small>差し替えできる</small></span>
+        <span class="say">テストのときだけ、偽物を渡すこともできる</span>
+      </li>
+    </ol>
+  </div>
+  <p class="lead" style="margin-bottom:0">やっていることは「<span class="pen">誰が誰を必要としているかを、外側で管理する</span>」。これが今日のいちばん大事なところ。</p>
+</div>
+
+<section id="why">
+  <h2>なんで、こんな道具が生まれたの？</h2>
+  <p class="lead">答えはシンプル。<span class="mark pink">自分で組み立てると、はがせなくなるから。</span></p>
+
+  <div class="notes">
+    <div class="note">
+      <h3>クラスの中で相手を作ると、固まる</h3>
+      <p>注文処理のクラスの中に「本番用のデータベース接続を作る」と書いてしまうと、そのクラスは本番のデータベースなしでは動かせなくなります。</p>
+      <p class="eg">テストしたいだけなのにデータベースを立ち上げる必要がある。ここが、後になって効いてきます。</p>
+    </div>
+
+    <div class="note">
+      <h3>同じ準備を、毎回書いていた</h3>
+      <p>接続を開く、設定を読む、トランザクションを始める、失敗したら戻す、最後に閉じる。やりたい処理は3行なのに、まわりの準備が30行。</p>
+      <p class="eg">しかも、その30行はどのクラスでもほぼ同じ。コピーされ、少しずつ書き方がずれ、閉じ忘れが混ざっていきます。</p>
+    </div>
+
+    <div class="note">
+      <h3>だから、組み立てを外に出す</h3>
+      <p>「必要なものを、外から渡してもらう」形にする。これがDI（依存性の注入）。組み立て役をSpringに任せ、使う側は要求を書くだけにします。</p>
+      <p class="eg">渡すものを差し替えられるので、テストでは偽物を、本番では本物を、という切りかえが自然にできます。</p>
+    </div>
+  </div>
+</section>
+
+<section id="compare">
+  <h2>誰が、誰を作るのか</h2>
+  <p class="lead">ボタンで切りかえて、線の向きを見てみよう。</p>
+
+  <div class="board">
+    <div class="switch">
+      <button type="button" id="btn-self" aria-pressed="true">自分でnewする</button>
+      <button type="button" id="btn-di" aria-pressed="false">Springに任せる</button>
+    </div>
+    <p class="tally" id="tally">テストで差し替えられる部品　<b>0</b> / 3</p>
+    <figure style="margin:0">
+      <svg viewBox="0 0 600 250" role="img" aria-label="自分でnewする場合は依存が固定され、Springに任せると外から差し替えられることを示す図">
+        <g font-family="'Zen Maru Gothic',sans-serif">
+          <g id="sp-self">
+            <text x="300" y="24" text-anchor="middle" font-size="15" font-weight="700" fill="#E4453A">クラスの中に、相手が埋め込まれている</text>
+            <rect x="150" y="44" width="300" height="160" rx="14" fill="#FDE6DC" stroke="#16263F" stroke-width="2"/>
+            <text x="300" y="70" text-anchor="middle" font-size="14" font-weight="700" fill="#16263F">注文サービス</text>
+            <g fill="#fff" stroke="#16263F" stroke-width="2">
+              <rect x="176" y="86" width="248" height="34" rx="8"/>
+              <rect x="176" y="128" width="248" height="34" rx="8"/>
+              <rect x="176" y="170" width="248" height="22" rx="8"/>
+            </g>
+            <g font-size="12.5" fill="#16263F" font-family="'Zen Kaku Gothic New',sans-serif">
+              <text x="300" y="108" text-anchor="middle">new 本番用DB接続()</text>
+              <text x="300" y="150" text-anchor="middle">new メール送信()</text>
+              <text x="300" y="186" text-anchor="middle">new 在庫チェック()</text>
+            </g>
+            <text x="300" y="228" text-anchor="middle" font-size="13" fill="#E4453A" font-weight="700" font-family="'Zen Kaku Gothic New',sans-serif">テストしたいだけでも、本物のDBとメールが動く</text>
+          </g>
+
+          <g id="sp-di" class="hidden">
+            <text x="300" y="22" text-anchor="middle" font-size="15" font-weight="700" fill="#1E8A4C">組み立て役が、外から差し込む</text>
+            <rect x="30" y="36" width="540" height="60" rx="14" fill="#D3C4F2" stroke="#16263F" stroke-width="2"/>
+            <text x="300" y="60" text-anchor="middle" font-size="14" font-weight="700" fill="#16263F">DIコンテナ（Spring）</text>
+            <text x="300" y="80" text-anchor="middle" font-size="11.5" fill="#16263F" font-family="'Zen Kaku Gothic New',sans-serif">どの部品が要るかを知っていて、作って配る</text>
+            <g stroke="#25A167" stroke-width="3" fill="none">
+              <path d="M140 96 L120 132"/>
+              <path d="M300 96 L300 132"/>
+              <path d="M460 96 L480 132"/>
+            </g>
+            <g fill="#DDF3E5" stroke="#16263F" stroke-width="2">
+              <rect x="40" y="134" width="160" height="42" rx="10"/>
+              <rect x="220" y="134" width="160" height="42" rx="10"/>
+              <rect x="400" y="134" width="160" height="42" rx="10"/>
+            </g>
+            <g font-size="12.5" fill="#16263F" font-family="'Zen Kaku Gothic New',sans-serif">
+              <text x="120" y="160" text-anchor="middle">DB接続</text>
+              <text x="300" y="160" text-anchor="middle">メール送信</text>
+              <text x="480" y="160" text-anchor="middle">在庫チェック</text>
+            </g>
+            <line x1="300" y1="176" x2="300" y2="194" stroke="#16263F" stroke-width="2"/>
+            <rect x="200" y="196" width="200" height="36" rx="10" fill="#FFE066" stroke="#16263F" stroke-width="2"/>
+            <text x="300" y="220" text-anchor="middle" font-size="13" font-weight="700" fill="#16263F">注文サービス（newを書かない）</text>
+            <text x="300" y="246" text-anchor="middle" font-size="12.5" fill="#1E8A4C" font-family="'Zen Kaku Gothic New',sans-serif" font-weight="700">3つとも、テストでは偽物に差し替えられる</text>
+          </g>
+        </g>
+      </svg>
+      <figcaption>やっていることは、線の向きを変えただけです。「自分で相手を作る」から「作ったものを渡してもらう」へ。これだけで、部品をはがせるようになります。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="calc">
+  <h2>準備のコードは、どれくらい消える？</h2>
+  <p class="lead">機能の数と、1機能あたりの定型コードの量を選んでみよう。</p>
+  <div class="calcbox">
+    <div class="calcrow">
+      <div>
+        <label for="feats">機能の数</label>
+        <select id="feats"></select>
+      </div>
+      <div>
+        <label for="lines">1機能の準備コード</label>
+        <select id="lines"></select>
+      </div>
+    </div>
+    <div class="result" id="calc-result"></div>
+  </div>
+</section>
+
+<section id="boot">
+  <h2>起動時に、Springがやっていること</h2>
+  <p class="lead">「魔法みたい」と言われる部分の中身です。<span class="pen">タップして開いてみよう。</span></p>
+
+  <div class="tree">
+    <h3>アプリが立ち上がるまでの5ステップ</h3>
+    <div class="step-list" id="tree-boot"></div>
+  </div>
+</section>
+
+<section id="family">
+  <h2>SpringとSpring Bootのちがい</h2>
+  <p class="lead">名前が2つあって、まずここでつまずきます。</p>
+  <div class="notes">
+    <div class="note">
+      <h3>Spring は、土台のほう</h3>
+      <p>DIの仕組みそのものと、その上に積まれた機能群を指します。Web、データベース、認証など、目的ごとに部品が分かれています。</p>
+      <p class="eg">強力なぶん、使い始めるまでに決めることが多い。かつては設定ファイルとの格闘が名物でした。</p>
+    </div>
+    <div class="note">
+      <h3>Spring Boot は、初期設定つきの箱</h3>
+      <p>「よくある構成なら、たいてい黙って動く」ようにしたもの。使いたい部品を宣言すると、それに合った初期設定が自動で入ります。</p>
+      <p class="eg">Webサーバーも中に入っているので、<span class="mark cyan">できあがったファイルを1つ実行すれば動く</span>。今から始めるなら、まずこちらです。</p>
+    </div>
+    <div class="note">
+      <h3>アノテーションという目印</h3>
+      <p>クラスやメソッドの上に付ける <code>@</code> で始まる印です。「これはSpringが管理する部品」「ここはトランザクションの範囲」といった意味を、その場に書きます。</p>
+      <p class="eg">設定ファイルに書いていたことを、コードのそばに置けるようにしたもの。読みやすい反面、印の意味を知らないと動きが追えません。</p>
+    </div>
+  </div>
+</section>
+
+<section id="quiz">
+  <h2>クイズ：きみは何問わかる？</h2>
+  <p class="lead">全5問。まちがえても大丈夫、答えのほうが面白い。</p>
+  <div class="quiz" id="quiz"></div>
+</section>
+
+<section id="careful">
+  <h2>気をつけないと、追えなくなる</h2>
+  <p class="lead">自動でやってくれることは、裏を返せば「見えない」ということです。</p>
+  <ol class="steps">
+    <li><b>受け取り方は、コンストラクタで。</b>必要なものを引数で受け取る形にしておくと、何に依存しているかが一目で分かります。フィールドに直接差し込む書き方は、依存が隠れます。</li>
+    <li><b>循環参照に気をつける。</b>AがBを必要とし、BがAを必要とすると、組み立てられません。起動時に止まってくれますが、たいてい設計を見直す合図です。</li>
+    <li><b>自分のクラス内の呼び出しには、印が効かない。</b>トランザクションなどの印は、外から呼ばれたときに働きます。同じクラス内のメソッドを直接呼ぶと素通りします。有名な落とし穴です。</li>
+    <li><b>設定を、コードに埋め込まない。</b>接続先やパスワードは外部の設定に置き、環境ごとに切りかえます。これができていないと、環境が増えるたびにビルドし直すことになります。</li>
+    <li><b>印の意味を、調べてから使う。</b>コピーしてきた <code>@</code> が何をしているか分からないまま動かすと、不具合のときに手も足も出ません。</li>
+    <li><b>起動が遅くなることを見込む。</b>部品を探して組み立てるぶん、立ち上がりに時間がかかります。開発中のやり直し回数を考えると、無視できない差になります。</li>
+  </ol>
+</section>
+
+<section id="words">
+  <h2>ことばのミニ辞典</h2>
+  <p class="lead">この先どこかで見かけたときのために。</p>
+  <dl class="words">
+    <dt>DI（依存性の注入）</dt>
+    <dd>必要なものを自分で作らず、外から渡してもらう考え方。差し替えができるようになり、テストが書きやすくなる。</dd>
+    <dt>Bean</dt>
+    <dd>Springが管理している部品1つ1つのこと。目印を付けたクラスは、起動時に作られてBeanになる。</dd>
+    <dt>DIコンテナ</dt>
+    <dd>Beanを作って保管し、必要なところへ配る入れ物。Springの中心にある仕組み。</dd>
+    <dt>アノテーション</dt>
+    <dd><code>@</code> で始まる目印。クラスやメソッドに意味を持たせ、Springに扱い方を伝える。</dd>
+    <dt>AOP</dt>
+    <dd>本来の処理の前後に、共通の処理をはさみ込む仕組み。トランザクションやログの記録に使われる。</dd>
+    <dt>Spring Boot</dt>
+    <dd>よくある構成の初期設定をあらかじめ用意したもの。Webサーバーも同梱され、1つ実行すれば動く形にできる。</dd>
+  </dl>
+</section>
+
+<section class="sibling">
+  <h2>ほかの解説ページ</h2>
+  <ul>
+    <li><a href="mcp.html"><b>MCPのしくみ</b><span>AIは、外の道具を借りて動いている。</span></a></li>
+    <li><a href="cicd.html"><b>CI/CDのしくみ</b><span>直したものを、こわがらずに届けるために。</span></a></li>
+    <li><a href="websocket.html"><b>WebSocketのしくみ</b><span>「まだ？」と聞きに行かなくてよくなった日。</span></a></li>
+    <li><a href="flyway.html"><b>Flywayのしくみ</b><span>データベースだけ、やり直しがきかない。</span></a></li>
+    <li><a href="getdown.html"><b>Getdownのしくみ</b><span>配ったあとに、直せるようにする。</span></a></li>
+    <li><a href="angular.html"><b>Angularのしくみ</b><span>画面を、部品に切り分ける。</span></a></li>
+    <li><a href="bigip.html"><b>BIG-IPのしくみ</b><span>入口を1つにして、裏を何台にでも。</span></a></li>
+    <li><a href="docker.html"><b>Dockerのしくみ</b><span>「私のPCでは動く」を、なくすために。</span></a></li>
+    <li><a href="kubernetes.html"><b>Kubernetesのしくみ</b><span>落ちたら、勝手に起き上がる。</span></a></li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <p>Spring / Spring Boot を、たとえ話・図解・クイズでたどるやさしい解説ページです。書き方の詳細は、公式ドキュメントをどうぞ。</p>
+  <p class="footver">Springのしくみ　v1.0.0</p>
+</footer>
+
+</div>
+
+<script>
+"use strict";
+var APP_VERSION = "1.0.0";
+
+function initSwitch(){
+  var self = document.getElementById("sp-self");
+  var di = document.getElementById("sp-di");
+  var sBtn = document.getElementById("btn-self");
+  var dBtn = document.getElementById("btn-di");
+  var tally = document.getElementById("tally");
+  if(!self || !di) return;
+
+  function show(isSelf){
+    self.classList.toggle("hidden", !isSelf);
+    di.classList.toggle("hidden", isSelf);
+    sBtn.setAttribute("aria-pressed", isSelf ? "true" : "false");
+    dBtn.setAttribute("aria-pressed", isSelf ? "false" : "true");
+    tally.innerHTML = isSelf
+      ? 'テストで差し替えられる部品　<b>0</b> / 3'
+      : 'テストで差し替えられる部品　<b>3</b> / 3';
+  }
+  sBtn.addEventListener("click", function(){ show(true); });
+  dBtn.addEventListener("click", function(){ show(false); });
+}
+
+function initCalc(){
+  var f = document.getElementById("feats");
+  var l = document.getElementById("lines");
+  var res = document.getElementById("calc-result");
+  if(!f || !l) return;
+
+  [5,10,20,40,80,150].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v + "個";
+    if(v === 40) o.selected = true;
+    f.appendChild(o);
+  });
+  [10,20,30,50,80].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v + "行";
+    if(v === 30) o.selected = true;
+    l.appendChild(o);
+  });
+
+  function update(){
+    var feats = parseInt(f.value, 10);
+    var lines = parseInt(l.value, 10);
+    var manual = feats * lines;
+    var framework = Math.round(feats * 2);
+    var max = Math.max(manual, 1);
+    var saved = manual - framework;
+
+    var html = '<p class="rline">自前で書くと、準備だけで <strong>' + manual.toLocaleString() +
+               '行</strong>。Springに任せると、目印と受け取りの宣言で <strong>' + framework.toLocaleString() +
+               '行</strong>ほど。差は <strong>' + saved.toLocaleString() + '行</strong>です。</p>';
+
+    html += '<div class="bars">';
+    html += '<div><p class="bar-label">自前　' + feats + '機能 × ' + lines + '行</p>' +
+            '<div class="bar"><span style="width:100%"></span></div></div>';
+    html += '<div><p class="bar-label">Spring　宣言だけ</p>' +
+            '<div class="bar good"><span style="width:' + Math.max(framework / max * 100, 2) + '%"></span></div></div>';
+    html += '</div>';
+
+    html += '<p class="rline" style="margin:0">ただし、消えたわけではありません。' +
+            '<span class="pen">見えない場所に移った</span>だけです。だからこそ、何が自動で行われているかを一度は確かめておく価値があります。</p>';
+    res.innerHTML = html;
+  }
+
+  f.addEventListener("change", update);
+  l.addEventListener("change", update);
+  update();
+}
+
+var BOOT = [
+  {y:"①", n:"部品を探す", t:"どのクラスを管理すればいいか、<b>誰も教えていない</b>状態では始まらない。", f:"決められた範囲のクラスを読み、目印（アノテーション）が付いているものを集める。これが管理対象の一覧になる。"},
+  {y:"②", n:"設定を読む", t:"接続先をコードに書くと、<b>環境ごとにビルドし直す</b>ことになる。", f:"外部の設定ファイルや環境変数を読み込む。同じビルドのまま、開発用と本番用を切りかえられる。"},
+  {y:"③", n:"順番を決めて組み立てる", t:"AがBを必要とするとき、<b>Bが先にできていないと</b>Aは作れない。", f:"依存の関係をたどって、必要なものから順に作る。できたものを次のものに渡していく。循環していれば、ここで止まる。"},
+  {y:"④", n:"必要なものを包む", t:"トランザクションの開始と終了を<b>全メソッドに手で書く</b>ことになる。", f:"印の付いた部品を、共通処理でくるんだものに差し替える。呼ぶ側は気づかないまま、前後の処理が実行される。"},
+  {y:"⑤", n:"受け口を開く", t:"組み立てが終わっても、<b>外からの入口がなければ</b>誰も呼べない。", f:"内蔵のWebサーバーを起動し、URLと処理の対応づけを済ませる。ここで初めてリクエストを受け付けられる状態になる。"}
+];
+
+function buildBoot(){
+  var host = document.getElementById("tree-boot");
+  if(!host) return;
+  BOOT.forEach(function(s, i){
+    var wrap = document.createElement("div");
+    wrap.className = "step";
+    wrap.setAttribute("aria-expanded","false");
+    var btnId = "boot-btn-" + i, panId = "boot-pan-" + i;
+
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.id = btnId;
+    btn.setAttribute("aria-controls", panId);
+    btn.setAttribute("aria-expanded","false");
+    btn.innerHTML = '<span class="yr">' + s.y + '</span><span class="nm">' + s.n +
+                    '</span><span class="plus" aria-hidden="true"></span>';
+
+    var pan = document.createElement("div");
+    pan.className = "detail"; pan.id = panId; pan.hidden = true;
+    pan.setAttribute("role","region");
+    pan.setAttribute("aria-labelledby", btnId);
+    pan.innerHTML = '<p class="trouble">😖 これがないと：' + s.t + '</p>' +
+                    '<p class="fix">💡 やっていること：' + s.f + '</p>';
+
+    btn.addEventListener("click", function(){
+      var open = pan.hidden;
+      pan.hidden = !open;
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      wrap.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    wrap.appendChild(btn); wrap.appendChild(pan); host.appendChild(wrap);
+  });
+}
+
+var QUIZ = [
+  {
+    q:"DI（依存性の注入）を一言でいうと？",
+    c:["データベースに保存すること","必要なものを外から渡してもらうこと","画面を作ること","通信を速くすること"],
+    a:1,
+    e:"自分でnewせず、外から渡してもらいます。渡すものを差し替えられるので、テストでは偽物を使う、といったことが自然にできるようになります。"
+  },
+  {
+    q:"Springが管理している部品1つ1つを何と呼ぶ？",
+    c:["Bean","Node","Pod","Table"],
+    a:0,
+    e:"Beanです。目印を付けたクラスは、起動時に作られてBeanとして保管され、必要なところへ配られます。この入れ物がDIコンテナです。"
+  },
+  {
+    q:"Spring Boot が主にやってくれることは？",
+    c:["コードを自動生成する","よくある構成の初期設定を用意する","データを分析する","画面をデザインする"],
+    a:1,
+    e:"かつて設定ファイルとの格闘が必要だった部分を、既定値で埋めてくれます。Webサーバーも同梱されるので、できあがったファイルを実行するだけで動きます。"
+  },
+  {
+    q:"同じクラスの中のメソッドを直接呼ぶと、トランザクションの印が効かないのはなぜ？",
+    c:["Javaの制限","印は外から呼ばれたときに働く仕組みだから","設定が足りないから","バグだから"],
+    a:1,
+    e:"Springは部品を「共通処理でくるんだもの」に差し替えて渡しています。内部から直接呼ぶと、そのくるみを通らずに素通りします。有名な落とし穴です。"
+  },
+  {
+    q:"必要なものの受け取り方として、勧められるのは？",
+    c:["コンストラクタで受け取る","フィールドに直接差し込む","毎回newする","グローバル変数に置く"],
+    a:0,
+    e:"引数で受け取る形にすると、そのクラスが何に依存しているかが一目で分かります。数が増えすぎたら、そのクラスが仕事を持ちすぎているサインでもあります。"
+  }
+];
+
+var qIndex = 0, qScore = 0;
+
+function renderQuiz(){
+  var host = document.getElementById("quiz");
+  if(!host) return;
+
+  if(qIndex >= QUIZ.length){
+    var msg = qScore === 5 ? "全問正解。もう人に説明できるレベル。"
+            : qScore >= 3 ? "いい線いってる。まちがえた問題ほど、覚えて帰れる。"
+            : "ここからが面白いところ。上の5ステップをもう一度ひらいてみよう。";
+    host.innerHTML = '<p class="score">結果：' + qScore + ' / ' + QUIZ.length + ' 問正解</p>' +
+                     '<p style="margin:0 0 14px">' + msg + '</p>' +
+                     '<button class="qnext" type="button" id="again">もう一度やる</button>';
+    document.getElementById("again").addEventListener("click", function(){
+      qIndex = 0; qScore = 0; renderQuiz();
+    });
+    return;
+  }
+
+  var item = QUIZ[qIndex];
+  var html = '<div class="qhead"><span class="qcount">第' + (qIndex+1) + '問 / ' + QUIZ.length + '問</span></div>' +
+             '<p class="qtext">' + item.q + '</p><div class="choices">';
+  item.c.forEach(function(text, i){
+    html += '<button class="choice" type="button" data-i="' + i + '">' + text + '</button>';
+  });
+  html += '</div><div class="answer" id="answer" hidden></div>';
+  host.innerHTML = html;
+
+  var buttons = host.querySelectorAll(".choice");
+  Array.prototype.forEach.call(buttons, function(b){
+    b.addEventListener("click", function(){
+      var picked = parseInt(b.dataset.i, 10);
+      var ok = picked === item.a;
+      if(ok) qScore++;
+
+      Array.prototype.forEach.call(buttons, function(x, i){
+        x.disabled = true;
+        if(i === item.a) x.classList.add("correct");
+        else if(i === picked) x.classList.add("wrong");
+      });
+
+      var ans = document.getElementById("answer");
+      ans.hidden = false;
+      ans.innerHTML = '<span class="verdict ' + (ok ? "ok" : "ng") + '">' +
+                      (ok ? "正解！" : "残念、正解は「" + item.c[item.a] + "」") + '</span>' +
+                      item.e +
+                      '<div><button class="qnext" type="button" id="next">' +
+                      (qIndex === QUIZ.length - 1 ? "結果を見る" : "次の問題へ") + '</button></div>';
+      document.getElementById("next").addEventListener("click", function(){
+        qIndex++; renderQuiz();
+      });
+      document.getElementById("next").focus();
+    });
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  document.getElementById("version").textContent = "v" + APP_VERSION;
+  initSwitch();
+  initCalc();
+  buildBoot();
+  renderQuiz();
+});
+</script>
+</body>
+</html>
