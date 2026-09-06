@@ -370,3 +370,43 @@ footer{margin-top:52px;border-top:2px solid var(--ink);padding:20px 0 46px;font-
 .newsmore:hover{background:var(--mk-yellow)}
 .newsmore::after{content:"　↓";font-size:12px}
 .newsmore[aria-expanded="true"]::after{content:"　↑"}
+
+/* ---- 用語索引の帯（追加分） ---- */
+.src.graphql{background:var(--mk-green)}
+
+/* ---- コード表示（詳細章の外でも使う） ---- */
+main code{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;
+  background:#EEF3F8;border:1px solid var(--rule-strong);border-radius:5px;padding:1px 5px;
+}
+main pre code{background:none;border:0;color:inherit;padding:0;font-size:inherit}
+.codeblock{
+  background:#16263F;color:#E8F0F7;border-radius:10px;padding:14px 16px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:13px;line-height:1.8;margin:0 0 12px;
+}
+.codeblock .hl{color:var(--mk-yellow)}
+.codeblock .ky{color:var(--mk-cyan)}
+.codeblock .st{color:var(--mk-green)}
+.codeblock .cm{color:#8FA6BC}
+
+/* ---- 送るものと、返るものを並べて見る ---- */
+.panes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:0}
+.pane{margin:0;min-width:0}
+.plabel{
+  font-family:var(--font-round);font-weight:700;font-size:13px;margin:0 0 6px;
+  display:flex;align-items:center;gap:8px;
+}
+.plabel .pill{
+  font-size:11px;font-weight:700;line-height:1.8;
+  border:1.5px solid var(--ink);border-radius:999px;padding:0 10px;background:var(--mk-yellow);
+}
+.plabel .pill.res{background:var(--mk-green)}
+.pane .codeblock{margin:0;min-height:238px}
+.mirrornote{
+  border-left:4px solid var(--red);padding:2px 0 2px 12px;margin:12px 0 0;font-size:14px;
+}
+@media (max-width:640px){
+  .panes{grid-template-columns:1fr}
+  .pane .codeblock{min-height:0}
+}
