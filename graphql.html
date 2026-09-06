@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GraphQLのしくみ — ほしい形を、こちらから書く</title>
+<meta name="description" content="GraphQL（クエリ・スキーマ・リゾルバ・N+1問題）を、たとえ話・図解・クイズでたどるやさしい解説ページ。送るクエリと返るJSONを並べて動かせます。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="topbar">
+  <span class="logo">GraphQLのしくみ</span>
+  <span class="ver" id="version">v1.0.0</span>
+  <a class="home" href="index.html">← 用語集トップ</a>
+</header>
+
+<main>
+
+<div class="hero" id="basic">
+  <h1><span class="mark">ほしい形</span>を、<br>こちらから書く。</h1>
+  <p>これまでのAPIでは、返ってくる形を決めるのはサーバーでした。窓口ごとに中身が決まっていて、こちらはそれを受け取るだけ。<strong>GraphQL</strong> は、その役目を入れかえます。ほしいものの形を<strong>こちら（クライアント）が文章で書いて送り</strong>、サーバーはその形のまま返す。2015年に仕様が公開された、APIのための問い合わせ言語です。</p>
+
+  <div class="chain">
+    <p class="chain-title">「形を書いて送る」にたどりつくまで——</p>
+    <ol>
+      <li>
+        <span class="node now">画面が増える<small>いま</small></span>
+        <span class="say">画面ごとに、ほしい項目の組み合わせが変わっていく</span>
+      </li>
+      <li class="arrowline">でも、返る形はサーバーが決めているので</li>
+      <li>
+        <span class="node">多すぎる／足りない<small>過不足</small></span>
+        <span class="say">使わない項目までついてくる。逆に足りなくて、何度も往復する</span>
+      </li>
+      <li class="arrowline">画面に合わせて窓口を足していくと</li>
+      <li>
+        <span class="node">窓口が増え続ける<small>消せない</small></span>
+        <span class="say">似たようなAPIが並び、誰が使っているか分からなくなる</span>
+      </li>
+      <li class="arrowline">だったら、形を決める役をわたしてしまおう</li>
+      <li>
+        <span class="node robot">ほしい形を書いて送る<small>クエリ</small></span>
+        <span class="say">サーバーは、送られてきた形のとおりに組み立てて返す</span>
+      </li>
+      <li class="arrowline">ただし、何でも書けては困るので</li>
+      <li>
+        <span class="node goal">型で、書ける範囲を決める<small>スキーマ</small></span>
+        <span class="say">書けるのは型に載っていることだけ。実行する前に確かめられる</span>
+      </li>
+    </ol>
+  </div>
+  <p class="lead" style="margin-bottom:0">GraphQLは「速いAPI」ではありません。<span class="pen">形を決める役を、サーバーからクライアントへ渡した</span>APIです。</p>
+</div>
+
+<section id="why">
+  <h2>なんで、こんなものが生まれたの？</h2>
+  <p class="lead">答えはシンプル。<span class="mark pink">画面がほしい形と、APIが返す形は、いつもズレるから。</span></p>
+
+  <div class="notes">
+    <div class="note">
+      <h3>多すぎる — 使わない項目まで、ついてくる</h3>
+      <p>「ユーザー1件」の窓口をたたくと、登録日も設定も権限も、ぜんぶまとめて返ってきます。画面が使うのは名前と写真の2つだけなのに。</p>
+      <p class="eg">定食しかない食堂のようなもの。ごはんだけ欲しくても、小鉢も汁物もついてきて、そのぶん待たされます。</p>
+    </div>
+
+    <div class="note">
+      <h3>足りない — 1回では終わらず、何度も往復する</h3>
+      <p>逆もあります。本の情報を取り、その中の著者IDでもう1回、レビューを出すのにもう1回。前の答えを見ないと次が投げられないので、往復が<strong>直列に</strong>つながります。</p>
+      <p class="eg">回線が遠いほど、この「1往復」が重くのしかかります。項目が足りないのではなく、<b>取りに行く回数</b>が足りていない状態です。</p>
+    </div>
+
+    <div class="note">
+      <h3>窓口が増える — そして、消せなくなる</h3>
+      <p>過不足をなくそうとすると、画面ごとの専用APIを足すことになります。似た窓口が並び、どれを誰が使っているか分からなくなり、こわくて消せません。</p>
+      <p class="eg">「v2を作る」という手もありますが、それはv1を永久に運び続ける約束でもあります。GraphQLがバージョンを切らない方向へ進んだのは、ここが出発点です。</p>
+    </div>
+  </div>
+
+  <a class="more" href="#d1"><span class="tag">詳しく</span>実際に送る文章は、どう書くのか</a>
+</section>
+
+<section id="mirror">
+  <h2>聞いた形が、そのまま返ってくる</h2>
+  <p class="lead">GraphQLでいちばん大事なのはここ。<span class="pen">ほしい項目を押すと、送る文章と返るJSONが、いっしょに変わります。</span></p>
+
+  <div class="board">
+    <div class="chips" id="field-chips"></div>
+    <p class="tally" id="mirror-tally"></p>
+    <div class="panes">
+      <figure class="pane">
+        <p class="plabel"><span class="pill">送るもの</span>クエリ</p>
+        <pre class="codeblock" id="pane-query"></pre>
+      </figure>
+      <figure class="pane">
+        <p class="plabel"><span class="pill res">返るもの</span>レスポンス（JSON）</p>
+        <pre class="codeblock" id="pane-response"></pre>
+      </figure>
+    </div>
+    <p class="mirrornote" id="mirror-note"></p>
+    <figcaption style="font-size:14px;color:var(--ink-soft);margin-top:12px">左と右で、かっこの入れ子がそのまま対応しているのが分かります。これは偶然ではなく仕様で、結果は <code>data</code> というキーの下に、送ったクエリと同じ形で入ると決められています。</figcaption>
+  </div>
+
+  <a class="more" href="#d3"><span class="tag">詳しく</span>data のとなりにある errors と extensions</a>
+</section>
+
+<section id="compare">
+  <h2>往復の回数は、どう変わる？</h2>
+  <p class="lead">ボタンで切りかえて、1つの画面を描くまでの往復を数えてみよう。</p>
+
+  <div class="board">
+    <div class="switch">
+      <button type="button" id="btn-rest" aria-pressed="true">窓口ごとのAPI</button>
+      <button type="button" id="btn-gql" aria-pressed="false">GraphQL</button>
+    </div>
+    <p class="tally" id="trip-tally">画面1つを描くのに必要な往復　<b>4回</b></p>
+    <figure style="margin:0">
+      <svg viewBox="0 0 600 250" role="img" aria-label="窓口ごとのAPIでは4回の往復が必要だが、GraphQLでは1回の往復で同じ画面のデータがそろうことを示す図">
+        <g font-family="'Zen Maru Gothic',sans-serif">
+
+          <g id="tp-rest">
+            <text x="300" y="24" text-anchor="middle" font-size="14" font-weight="700" fill="#E4453A">画面1つのために、4往復</text>
+
+            <g stroke="#16263F" stroke-width="2">
+              <rect x="16" y="46" width="104" height="168" rx="10" fill="#FDE6DC"/>
+              <rect x="480" y="46" width="104" height="168" rx="10" fill="#FFE066"/>
+            </g>
+            <g font-size="13" font-weight="700" fill="#16263F">
+              <text x="68" y="136" text-anchor="middle">ブラウザ</text>
+              <text x="532" y="130" text-anchor="middle">サーバー</text>
+            </g>
+            <text x="532" y="148" text-anchor="middle" font-size="11" fill="#16263F" font-family="'Zen Kaku Gothic New',sans-serif">窓口がたくさん</text>
+
+            <g stroke="#16263F" stroke-width="2">
+              <line x1="130" y1="76" x2="470" y2="76"/>
+              <line x1="130" y1="122" x2="470" y2="122"/>
+              <line x1="130" y1="168" x2="470" y2="168"/>
+              <line x1="130" y1="204" x2="470" y2="204"/>
+            </g>
+            <g fill="#16263F">
+              <polygon points="470,76 460,71 460,81"/><polygon points="130,76 140,71 140,81"/>
+              <polygon points="470,122 460,117 460,127"/><polygon points="130,122 140,117 140,127"/>
+              <polygon points="470,168 460,163 460,173"/><polygon points="130,168 140,163 140,173"/>
+              <polygon points="470,204 460,199 460,209"/><polygon points="130,204 140,199 140,209"/>
+            </g>
+            <g font-size="11.5" fill="#16263F" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">
+              <text x="300" y="70">① GET /books/102</text>
+              <text x="300" y="116">② GET /authors/7</text>
+              <text x="300" y="162">③ GET /books/102/reviews</text>
+              <text x="300" y="198">④ GET /users/me</text>
+            </g>
+            <text x="300" y="238" text-anchor="middle" font-size="12" fill="#54677E" font-family="'Zen Kaku Gothic New',sans-serif">②は①の答えの中の著者IDが要る。だから、待ってからでないと投げられない</text>
+          </g>
+
+          <g id="tp-gql" class="hidden">
+            <text x="300" y="24" text-anchor="middle" font-size="14" font-weight="700" fill="#1E8A4C">同じ画面が、1往復</text>
+
+            <g stroke="#16263F" stroke-width="2">
+              <rect x="16" y="46" width="104" height="168" rx="10" fill="#FDE6DC"/>
+              <rect x="480" y="46" width="104" height="168" rx="10" fill="#DDF3E5"/>
+            </g>
+            <g font-size="13" font-weight="700" fill="#16263F">
+              <text x="68" y="136" text-anchor="middle">ブラウザ</text>
+              <text x="532" y="130" text-anchor="middle">サーバー</text>
+            </g>
+            <text x="532" y="148" text-anchor="middle" font-size="11" fill="#16263F" font-family="'Zen Kaku Gothic New',sans-serif">窓口はここ1つ</text>
+
+            <line x1="130" y1="122" x2="470" y2="122" stroke="#16263F" stroke-width="3"/>
+            <g fill="#16263F">
+              <polygon points="470,122 458,116 458,128"/><polygon points="130,122 142,116 142,128"/>
+            </g>
+            <text x="300" y="112" text-anchor="middle" font-size="11.5" fill="#16263F" font-family="ui-monospace,Menlo,monospace">POST /graphql</text>
+
+            <rect x="140" y="140" width="320" height="56" rx="8" fill="#fff" stroke="#16263F" stroke-width="1.5"/>
+            <g font-size="11" fill="#16263F" font-family="ui-monospace,Menlo,monospace">
+              <text x="152" y="158">{ book(id: "102") { title</text>
+              <text x="152" y="174">&#160;&#160;&#160;&#160;author { name } reviews { stars } }</text>
+              <text x="152" y="190">&#160;&#160;viewer { name } }</text>
+            </g>
+            <text x="300" y="238" text-anchor="middle" font-size="12" fill="#54677E" font-family="'Zen Kaku Gothic New',sans-serif">まとめて聞けるのは、型どうしがつながっている（グラフになっている）から</text>
+          </g>
+        </g>
+      </svg>
+      <figcaption>ただし、往復が消えたわけではありません。ブラウザとサーバーのあいだで減ったぶんが、<strong>サーバーとデータベースのあいだ</strong>にそのまま移っていることがあります。この話は下の「往復は、消えたのではなく移った」で。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="schema">
+  <h2>書ける範囲は、型で決まっている</h2>
+  <p class="lead">クライアントが何でも書けるわけではありません。書けるのは<span class="mark cyan">スキーマに載っていることだけ</span>です。</p>
+
+  <p style="font-size:15px;margin:0 0 12px">スキーマは、このAPIに何があるかを書いた設計図です。言語に依存しない書き方（SDL）で書くと、こう見えます。</p>
+
+<pre class="codeblock"><code><span class="ky">type</span> Query {            <span class="cm"># ここが入口。すべてはここから始まる</span>
+  book(id: <span class="hl">ID!</span>): Book
+  viewer: User
+}
+
+<span class="ky">type</span> Book {
+  id: <span class="hl">ID!</span>
+  title: <span class="hl">String!</span>       <span class="cm"># ! は「null にならない」という約束</span>
+  year: Int             <span class="cm"># ! が無ければ、null かもしれない</span>
+  author: Author        <span class="cm"># 型が型を指す。ここでグラフになる</span>
+  reviews: <span class="hl">[Review!]!</span>  <span class="cm"># [ ] はリスト</span>
+}
+
+<span class="ky">type</span> Author {
+  name: <span class="hl">String!</span>
+  country: String
+}</code></pre>
+
+  <p style="font-size:15px;margin:0 0 22px"><code>Book</code> が <code>Author</code> を指し、<code>Author</code> がまた別の型を指す。この「型が型を指す」つながりがグラフになっていて、クライアントはそこをたどって一度に取ってこられます。GraphQL の名前の由来はここです。</p>
+
+  <div class="tree">
+    <h3>名前のつく型は、6種類しかない</h3>
+    <div class="step-list" id="tree-types"></div>
+  </div>
+
+  <p class="eg" style="margin:0 0 8px">加えて、型そのものではなく型に付ける「修飾子」が2つあります。<code>!</code>（null にしない）と <code>[ ]</code>（リストにする）です。<code>[Review!]!</code> は「リスト自体もnullにならないし、中身にもnullは入らない」という意味になります。</p>
+
+  <a class="more" href="#d2"><span class="tag">詳しく</span>! と [ ] の組み合わせ、抽象型の使い分け</a>
+</section>
+
+<section id="three">
+  <h2>入口は3つ</h2>
+  <p class="lead">読む・書く・受け取り続ける。<span class="pen">どれも同じ書き方ですが、実行のされ方が違います。</span></p>
+
+  <div class="notes">
+    <div class="note">
+      <h3>query — 読む</h3>
+      <p>データを取ってくる操作です。書かれたフィールドは<strong>並列に</strong>解決してかまわないことになっているので、サーバーは順番を気にせず同時に処理できます。</p>
+      <p class="eg">先頭の <code>query</code> は省略できます（<code>{ book { title } }</code> だけでも通ります）。ただし変数を使うときや、名前をつけるときは省略できません。</p>
+    </div>
+    <div class="note">
+      <h3>mutation — 書く</h3>
+      <p>作る・変える・消す操作です。仕様では、<strong>副作用を持ってよいのは mutation のいちばん外側のフィールドだけ</strong>と決められています。そしてそれらは<span class="mark cyan">上から順に1つずつ（直列に）</span>実行されます。</p>
+      <p class="eg">直列なだけで、トランザクションではありません。1つ目が成功して2つ目が失敗したとき、1つ目を取り消すしくみは GraphQL 側にはありません。</p>
+    </div>
+    <div class="note">
+      <h3>subscription — 受け取り続ける</h3>
+      <p>「新しいレビューが付いたら教えて」のように、つなぎっぱなしで更新を受け取る操作です。1つの操作に書けるルートのフィールドは<strong>1つだけ</strong>と決まっています。</p>
+      <p class="eg">どの通信路を使うかは仕様の外。実際には <a href="websocket.html">WebSocket</a> や Server-Sent Events に載せることがほとんどです。</p>
+    </div>
+  </div>
+</section>
+
+<section id="life">
+  <h2>1回のリクエストで、何が起きているか</h2>
+  <p class="lead">送った文章は、サーバーの中で5つの段をくぐります。<span class="pen">タップして開いてみよう。</span></p>
+
+  <div class="tree">
+    <h3>解析して、照らして、呼んで、組み立てて、返す</h3>
+    <div class="step-list" id="tree-life"></div>
+  </div>
+
+  <a class="more" href="#d3"><span class="tag">詳しく</span>リクエストエラーとフィールドエラーの違い</a>
+</section>
+
+<section id="n1">
+  <h2>往復は、消えたのではなく移った</h2>
+  <p class="lead">一覧に並ぶ件数と、まとめ読みの有無を選んでみよう。</p>
+  <div class="calcbox">
+    <div class="calcrow">
+      <div>
+        <label for="cnt">一覧に並ぶ件数</label>
+        <select id="cnt"></select>
+      </div>
+      <div>
+        <label for="batch">まとめ読み（DataLoader）</label>
+        <select id="batch"></select>
+      </div>
+    </div>
+    <div class="result" id="calc-result"></div>
+  </div>
+
+  <a class="more" href="#d5"><span class="tag">詳しく</span>N+1のつぶし方と、リクエストの重さの抑え方</a>
+</section>
+
+<section id="versionless">
+  <h2>バージョンを、切らないという考え方</h2>
+  <p class="lead">「v2を作る」ではなく、<span class="mark pink">足して、古いものに印をつける。</span></p>
+
+  <div class="notes">
+    <div class="note">
+      <h3>足しても、誰も壊れない</h3>
+      <p>クライアントは、自分が書いたフィールドしか受け取りません。だから型やフィールドを増やしても、いま動いているクライアントの応答は<strong>1文字も変わりません</strong>。</p>
+      <p class="eg">「どんな変更も壊れうるから、版を切る」という前提が消えます。多くのGraphQL APIがバージョンを持たないのは、これが理由です。</p>
+    </div>
+    <div class="note">
+      <h3>消すときは、まず印をつける</h3>
+      <p><code>@deprecated(reason: "...")</code> を付けると、開発ツールが「これはもう使わないで」と警告してくれます。データはそのまま返り続けるので、いきなり壊れることはありません。</p>
+      <p class="eg">使われなくなったのを確かめてから、はじめて消します。順番は「足す → 印をつける → 移ってもらう → 消す」。</p>
+    </div>
+    <div class="note">
+      <h3>既定でnull許容なのには、理由がある</h3>
+      <p>GraphQLのフィールドは、何も付けなければ null になりえます。DBが落ちる、権限がない、外部サービスが応答しない——そのフィールドだけを null にして、<strong>残りは返せるようにする</strong>ための既定値です。</p>
+      <p class="eg"><code>!</code> を付けるのは「絶対に返せる」と約束できるときだけ。約束したフィールドが null になると、エラーは親までさかのぼり、親ごと null になります。付けすぎると、小さな失敗で大きく欠けます。</p>
+    </div>
+  </div>
+</section>
+
+<section id="careful">
+  <h2>気をつけないと、あとで困る</h2>
+  <p class="lead">自由に書けるということは、自由に重くも書けるということです。</p>
+  <ol class="steps">
+    <li><b>N+1を、はじめに潰す。</b>フィールドごとに関数を書ける気持ちよさの裏で、1件ずつDBに聞きに行く形になりがちです。同じ種類の問い合わせをためて1回にまとめる仕組み（DataLoader など）を、最初から入れておきます。</li>
+    <li><b>深さと広さに、上限を置く。</b><code>friends { friends { friends … } }</code> のような入れ子、別名を100個並べた1本のクエリ、1リクエストに何十も詰めた操作。どれも1通でサーバーを潰せます。深さ・広さ・バッチ数の上限は設定で持てることが多いので、必ず入れます。</li>
+    <li><b>一覧は、必ずページングする。</b>返る件数に上限のないリストは、それだけで危険です。カーソル方式（<code>edges</code> / <code>node</code> / <code>cursor</code> / <code>pageInfo</code>）が広く使われています。</li>
+    <li><b>ステータスコードだけを見ない。</b><code>data</code> が返っていれば、<code>errors</code> が入っていても 2xx で返るのが基本です。「200だから成功」と判断すると、一部だけ失敗した応答を見落とします。</li>
+    <li><b>キャッシュの考え方が変わる。</b>窓口が1本なので、URL単位のキャッシュが効きません。読み取りを <code>GET</code> で送る、あらかじめ登録した文書をIDで送る（persisted / trusted documents）、オブジェクトに全体で一意な <code>id</code> を持たせてクライアント側に貯める、といった別の手を使います。</li>
+    <li><b>認可は、リゾルバの中に書かない。</b>「この人はこの項目を見てよいか」はビジネスロジック層に1か所だけ置き、リゾルバはそこを呼ぶだけにします。入口がGraphQLだけとは限らないからです。</li>
+    <li><b>本番では、教えすぎない。</b>イントロスペクションと親切なエラー文は開発では便利ですが、本番ではスキーマの形を推測する手がかりになります。ただし止めるだけでは隠しきれないので、許可した文書だけを実行する方式と組み合わせます。</li>
+  </ol>
+
+  <a class="more" href="#d6"><span class="tag">詳しく</span>認可・イントロスペクション・キャッシュの置き場所</a>
+</section>
+
+<section id="quiz">
+  <h2>クイズ：きみは何問わかる？</h2>
+  <p class="lead">全5問。まちがえても大丈夫、答えのほうが面白い。</p>
+  <div class="quiz" id="quiz"></div>
+</section>
+
+<section id="words">
+  <h2>ことばのミニ辞典</h2>
+  <p class="lead">この先どこかで見かけたときのために。</p>
+  <dl class="words">
+    <dt>GraphQL</dt>
+    <dd>APIのための問い合わせ言語と、その実行のしくみ。ほしいデータの形をクライアントが書いて送り、サーバーはその形のまま返す。2015年に仕様が公開された。</dd>
+    <dt>スキーマ</dt>
+    <dd>そのAPIで何が聞けるかを、型で書き表したもの。クライアントが書けるのはここに載っていることだけで、実行前に照らし合わされる。</dd>
+    <dt>SDL（スキーマ定義言語）</dt>
+    <dd>スキーマを言語に依存しない形で書くための記法。<code>type Book { title: String! }</code> のように書く。</dd>
+    <dt>クエリ（query）</dt>
+    <dd>データを読むための操作。書かれたフィールドは並列に処理してよいことになっている。</dd>
+    <dt>ミューテーション（mutation）</dt>
+    <dd>データを書きかえるための操作。副作用を持ってよいのはいちばん外側のフィールドだけで、それらは上から順に1つずつ実行される。</dd>
+    <dt>サブスクリプション（subscription）</dt>
+    <dd>つなぎっぱなしで更新を受け取り続ける操作。1操作に書けるルートのフィールドは1つだけ。</dd>
+    <dt>フィールド</dt>
+    <dd>クエリで指定する「ほしい項目」1つぶん。オブジェクト型を返すフィールドには、その中身の指定（選択集合）が必ず要る。</dd>
+    <dt>リゾルバ</dt>
+    <dd>フィールド1つひとつに対応する、値を返す関数。GraphQLはこれを呼び集めて結果を組み立てる。データの取り方そのものは自由。</dd>
+    <dt>型修飾子（! と [ ]）</dt>
+    <dd><code>!</code> は「null にならない」、<code>[ ]</code> は「リストである」の意味。組み合わせて <code>[Review!]!</code> のように書く。</dd>
+    <dt>フラグメント</dt>
+    <dd>フィールドのまとまりに名前をつけて、いろいろなクエリから使い回すしくみ。画面の部品ごとに必要な項目を書いておくのに向く。</dd>
+    <dt>変数</dt>
+    <dd>クエリの中の値を <code>$id</code> のように外へ出し、別のJSONで渡すしくみ。文字列を継ぎ足してクエリを組み立てないための、正しいやり方。</dd>
+    <dt>ディレクティブ</dt>
+    <dd><code>@</code> ではじまる注釈。仕様が定めているのは <code>@include</code>／<code>@skip</code>（クエリ側）と <code>@deprecated</code>（スキーマ側）など。</dd>
+    <dt>イントロスペクション</dt>
+    <dd>スキーマ自身に「どんな型がある？」と聞ける仕組み。<code>__schema</code> や <code>__typename</code> がこれ。開発ツールの補完はこれで動いている。</dd>
+    <dt>N+1問題</dt>
+    <dd>一覧のN件それぞれについて、さらに1回ずつ問い合わせが起きてしまう状態。まとめ読み（バッチ）で1〜2回に畳むのが定石。</dd>
+    <dt>コネクション</dt>
+    <dd><code>edges</code>・<code>node</code>・<code>cursor</code>・<code>pageInfo</code> を使った、カーソル方式のページングの型。件数の上限をスキーマの形で表せる。</dd>
+    <dt>永続化文書（persisted / trusted documents）</dt>
+    <dd>使うクエリをあらかじめサーバーに登録しておき、実行時はそのIDだけを送る方式。通信量が減り、許可した文書だけを実行させられる。</dd>
+  </dl>
+</section>
+
+<section class="deep-head" id="deep">
+  <span class="deep-badge">ここから先は、もう一段くわしい話</span>
+  <h2>詳細解説：新人エンジニア向け</h2>
+  <p class="lead">ここまでの内容がわかっていれば、読まなくても困りません。実際に書く側・作る側になったとき、つまずきやすいところをまとめています。</p>
+
+  <div class="deep" id="d1">
+    <h3>1. クエリの書き方</h3>
+    <p class="sup">やさしい説明の「ほしい形を書いて送る」の部分</p>
+
+    <p>クエリは、入口の型（ふつうは <code>Query</code>）から始めて、ほしいフィールドを入れ子で並べていくだけです。オブジェクト型を返すフィールドには中身の指定が要り、スカラー型か列挙型（葉）にたどり着いたら、そこで止めます。</p>
+<pre><code>{
+  book(id: <span class="hl">"B-102"</span>) {
+    title            <span class="cm"># String — 葉。ここで止まる</span>
+    author {         <span class="cm"># Author — オブジェクト型。中身が必要</span>
+      name
+    }
+  }
+}</code></pre>
+
+    <h4>引数は、どのフィールドにも付けられる</h4>
+    <p>RESTでは引数を渡せるのはURLとクエリ文字列の1か所だけですが、GraphQLでは<strong>入れ子の奥のフィールドにも</strong>それぞれ引数を付けられます。スカラーを返すフィールドにも付けられるので、単位変換のような処理をサーバー側に1回だけ書いておく、といった使い方もできます。</p>
+<pre><code>{
+  book(id: "B-102") {
+    reviews(<span class="hl">first: 2</span>) { stars }
+    price(<span class="hl">currency: JPY</span>)
+  }
+}</code></pre>
+
+    <h4>操作名と別名</h4>
+    <p>先頭の <code>query</code> は省略できますが、名前を付けておくとサーバーのログやトレースで追いやすくなります。関数に名前を付けるのと同じ理由です。また、同じフィールドを違う引数で2回書きたいときは、結果のキーが衝突するので<strong>別名（alias）</strong>を付けます。</p>
+<pre><code>query <span class="hl">BookCompare</span> {
+  <span class="hl">left</span>: book(id: "B-102") { title }
+  <span class="hl">right</span>: book(id: "B-207") { title }
+}</code></pre>
+
+    <h4>変数 — 文字列を継ぎ足さない</h4>
+    <p>動く値は、クエリの文字列に埋め込まずに変数として外へ出します。手順は3つ。値を <code>$name</code> に置きかえ、操作の頭で型を宣言し、別のJSONで渡す。<strong>利用者の入力からクエリ文字列を組み立てるのは、やってはいけないこと</strong>です。</p>
+<pre><code>query BookPage(<span class="hl">$id: ID!</span>, $first: Int = 2) {
+  book(id: <span class="hl">$id</span>) {
+    title
+    reviews(first: $first) { stars }
+  }
+}
+
+<span class="cm"># 変数は、別のJSONで渡す</span>
+{ "id": "B-102" }</code></pre>
+    <p class="caution">変数を使うときは、操作の種類（<code>query</code> など）と名前の省略ができません。宣言できるのはスカラー型・列挙型・入力オブジェクト型だけです。</p>
+
+    <h4>フラグメント — 部品ごとに、必要な項目を持たせる</h4>
+    <p>同じフィールドの並びを何度も書かずにすむよう、名前を付けて切り出せます。画面の部品ごとにフラグメントを持たせ、最後に1本のクエリへ合流させるのが、実際のアプリでの定番の使い方です。</p>
+<pre><code>query Compare {
+  left:  book(id: "B-102") { <span class="hl">...card</span> }
+  right: book(id: "B-207") { <span class="hl">...card</span> }
+}
+
+<span class="ky">fragment</span> card <span class="ky">on</span> Book {
+  title
+  author { name }
+}</code></pre>
+
+    <h4>インラインフラグメントと __typename</h4>
+    <p>インターフェース型やユニオン型を返すフィールドでは、そのままだと共通のフィールドしか書けません。具体的な型のフィールドがほしいときは <code>... on 型名</code> を使います。返ってきたのがどの型かを知るには、どこにでも書けるメタフィールド <code>__typename</code> を足します。</p>
+<pre><code>{
+  search(text: "図書館") {
+    <span class="hl">__typename</span>
+    ... <span class="ky">on</span> Book   { title }
+    ... <span class="ky">on</span> Author { name }
+  }
+}</code></pre>
+    <p><code>__</code> で始まる名前はすべて GraphQL の予約語です。<code>__typename</code> のほか、<code>__schema</code> と <code>__type</code> がイントロスペクションの入口になっています。</p>
+
+    <h4>ディレクティブ — 形そのものを出し分ける</h4>
+    <p>引数では値しか変えられませんが、ディレクティブを使うと<strong>フィールドを含めるかどうか</strong>を切りかえられます。仕様がすべての実装に義務づけているのは、この2つだけです。</p>
+    <table>
+      <tr><th><code>@include(if: Boolean!)</code></th><td>true のときだけ、そのフィールドを含める</td></tr>
+      <tr><th><code>@skip(if: Boolean!)</code></th><td>true のときは、そのフィールドを飛ばす</td></tr>
+    </table>
+<pre><code>query Hero($detail: Boolean!) {
+  book(id: "B-102") {
+    title
+    reviews <span class="hl">@include(if: $detail)</span> { stars comment }
+  }
+}</code></pre>
+    <a class="back" href="#basic">← やさしい説明にもどる</a>
+  </div>
+
+  <div class="deep" id="d2">
+    <h3>2. スキーマの読み方</h3>
+    <p class="sup">やさしい説明の「書ける範囲は、型で決まっている」の部分</p>
+
+    <p>名前のつく型は6種類です。オブジェクト型・スカラー型・列挙型・インターフェース型・ユニオン型・入力オブジェクト型。これに、型ではない修飾子が2つ（<code>!</code> と <code>[ ]</code>）加わります。</p>
+
+    <h4>! と [ ] の組み合わせ</h4>
+    <p>この2つは重ねて書けます。どこに <code>!</code> が付いているかで意味が変わるので、表で覚えてしまうのが早いです。</p>
+    <table>
+      <tr><th><code>[String]</code></th><td>リスト自体が null でもよく、中身にも null が入りうる</td></tr>
+      <tr><th><code>[String!]</code></th><td>リスト自体は null でもよいが、中身に null は入らない</td></tr>
+      <tr><th><code>[String]!</code></th><td>リストは必ずある（空でもよい）が、中身に null が入りうる</td></tr>
+      <tr><th><code>[String!]!</code></th><td>リストも中身も null にならない</td></tr>
+    </table>
+    <p class="caution">どの書き方をしても「空でないリスト」は表せません。<code>[]</code> は常に正しい応答です。件数の下限を要求したいときは、型ではなく実行時の検査で見ることになります。</p>
+
+    <h4>インターフェース型とユニオン型の使い分け</h4>
+    <p>どちらも「複数の型のどれかが返る」ことを表しますが、性格が違います。</p>
+    <ul>
+      <li><strong>インターフェース型</strong> — 共通のフィールドを<strong>約束させる</strong>。実装する型は、同じ名前・同じ引数・同じ返り型のフィールドを必ず持ちます。共通部分はそのまま書けます。</li>
+      <li><strong>ユニオン型</strong> — 共通のフィールドは<strong>持たない</strong>。<code>union SearchResult = Book | Author</code> のように、具体的なオブジェクト型を並べるだけです。だから <code>... on</code> なしには何も書けません。</li>
+    </ul>
+<pre><code><span class="ky">interface</span> Node { id: ID! }
+
+<span class="ky">type</span> Book <span class="ky">implements</span> Node {
+  id: ID!
+  title: String!
+}
+
+<span class="ky">union</span> SearchResult = Book | Author</code></pre>
+    <p>フィールド名がたまたま同じだからといって、インターフェースにする必要はありません。クライアントから見て意味のあるまとまりのときだけ使います。</p>
+
+    <h4>入力オブジェクト型 — 引数に渡すためのかたまり</h4>
+    <p>引数に複雑な値を渡したいときは <code>type</code> ではなく <code>input</code> を使います。出力用の型と入力用の型は混ぜられません（出力の型を引数の型には使えません）。入力オブジェクト型のフィールドに引数を付けることもできません。</p>
+<pre><code><span class="ky">input</span> ReviewInput {
+  stars: Int!
+  comment: String
+}
+
+<span class="ky">type</span> Mutation {
+  createReview(bookId: ID!, review: <span class="hl">ReviewInput!</span>): Review
+}</code></pre>
+
+    <h4>ルートの型は、名前を変えられる</h4>
+    <p><code>Query</code>・<code>Mutation</code>・<code>Subscription</code> は「入口である」という以外はふつうのオブジェクト型です。名前を変えたいときは <code>schema</code> で宣言します。ただし、慣習どおりの名前にしておくのが無難です。</p>
+
+    <h4>説明文とコメント</h4>
+    <p>型・フィールド・引数には説明文を付けられます。<code>"""</code> で囲むか <code>"</code> で1行。これはイントロスペクションで読み出せるので、開発ツールの上に表示されます。<code>#</code> で始まる行はただのコメントで、クライアントからは見えません。</p>
+<pre><code><span class="st">"""本1冊"""</span>
+<span class="ky">type</span> Book {
+  <span class="st">"表紙に書かれているタイトル"</span>
+  title: String!
+  oldTitle: String <span class="hl">@deprecated(reason: "title を使ってください")</span>
+}</code></pre>
+    <a class="back" href="#schema">← やさしい説明にもどる</a>
+  </div>
+
+  <div class="deep" id="d3">
+    <h3>3. リクエストの一生と、応答の形</h3>
+    <p class="sup">やさしい説明の「1回のリクエストで、何が起きているか」の部分</p>
+
+    <p>送られた文章は <strong>解析（parse）→ 検証（validate）→ 実行（execute）→ 応答</strong> の順に処理されます。大事なのは、検証が<strong>実行の前</strong>に終わることです。存在しないフィールドや型の合わない変数は、DBに触る前にはじかれます。</p>
+
+    <h4>応答のトップレベルは3つだけ</h4>
+    <p>仕様が認めているキーは <code>data</code>・<code>errors</code>・<code>extensions</code> の3つです。<code>data</code> と <code>errors</code> の少なくとも片方は必ず入ります。両方入っている状態を<strong>部分応答</strong>と呼びます。</p>
+<pre><code>{
+  <span class="hl">"data"</span>: { "book": { "title": "銀河の図書館" } },
+  <span class="hl">"errors"</span>: [
+    {
+      "message": "レビューの取得に失敗しました",
+      "path": ["book", "reviews"],
+      "locations": [{ "line": 4, "column": 5 }]
+    }
+  ]
+}</code></pre>
+
+    <h4>リクエストエラーとフィールドエラー</h4>
+    <table>
+      <tr><th>リクエストエラー</th><td>構文エラーや検証エラー。実行が始まる前なので、<strong><code>data</code> は入らない</strong>。クライアント側の書きまちがい。</td></tr>
+      <tr><th>フィールドエラー</th><td>実行中に起きた失敗。ほかのフィールドの処理は続行され、<strong>取れたぶんは <code>data</code> に入ったまま</strong> <code>errors</code> が添えられる。</td></tr>
+    </table>
+    <p>ここが REST と大きく違うところです。「エラーが返った＝全部だめ」ではありません。クライアントは <code>errors</code> の <code>path</code> を見て、どのフィールドが欠けたのかを判断する必要があります。</p>
+
+    <h4>! が付いたフィールドが失敗すると</h4>
+    <p>Non-Null（<code>!</code>）のフィールドで失敗が起きると、そこに null は入れられません。エラーは<strong>親をさかのぼって</strong>、null を入れられる場所まで上がっていきます。<code>!</code> を付けすぎたスキーマでは、末端の小さな失敗で応答の大部分が消えることがあります。</p>
+
+    <h4>extensions</h4>
+    <p>実装が自由に使ってよい場所です。実行時間やレート制限の残量など、サーバー側の情報を載せているAPIがあります。中身に決まりはないので、依存するときは相手の実装を確認してください。</p>
+    <a class="back" href="#life">← やさしい説明にもどる</a>
+  </div>
+
+  <div class="deep" id="d4">
+    <h3>4. HTTPに載せる</h3>
+    <p class="sup">やさしい説明の「往復の回数」の部分</p>
+
+    <p>GraphQLの仕様は、どの通信路を使うかを決めていません。ただ実際にはHTTPが使われることがほとんどで、その作法は「GraphQL over HTTP」という別の仕様（策定中）にまとまっています。</p>
+
+    <h4>窓口は1つ</h4>
+    <p>RESTと違い、URLは資源を指しません。<code>/graphql</code> のような単一のエンドポイントに、すべての操作を送ります。何を取るかはURLではなく、本文に書いたクエリが決めます。</p>
+
+    <h4>POST の本文</h4>
+<pre><code>POST /graphql
+Content-Type: application/json
+Accept: <span class="hl">application/graphql-response+json</span>, application/json
+
+{
+  "query": "query BookPage($id: ID!) { book(id: $id) { title } }",
+  "operationName": "BookPage",
+  "variables": { "id": "B-102" }
+}</code></pre>
+    <p><code>query</code> だけが必須です（名前に反して、中身は mutation でもかまいません）。1つの文書に複数の操作を書いたときだけ <code>operationName</code> が必須になります。</p>
+
+    <h4>GET も使える（読み取りだけ）</h4>
+    <p>サーバーが対応していれば、<code>query</code> 操作は <code>GET /graphql?query={book(id:"B-102"){title}}</code> のようにも送れます。GETはキャッシュされやすいので、CDNを効かせたいときの手になります。ただしURLの長さに上限があるため、長いクエリはそのままでは載りません。<strong><code>mutation</code> をGETで送ることはできません。</strong></p>
+
+    <h4>永続化文書（persisted / trusted documents）</h4>
+    <p>そこで、使うクエリを事前にサーバーへ登録しておき、実行時は<strong>そのIDだけ</strong>を送るやり方が広く使われています。通信量が減り、URL長の問題も消えます。登録した文書だけを実行させれば、そのまま安全対策にもなります（後述）。</p>
+
+    <h4>ステータスコード</h4>
+    <ul>
+      <li><code>data</code> が null でない応答は、<code>errors</code> があっても <strong>2xx</strong>。HTTPには「一部成功」を表すコードがないためです。</li>
+      <li>検証エラーで実行に至らなかった場合は、ふつう <strong>400</strong>。</li>
+      <li>ただし古い実装（<code>application/json</code> で返すもの）では、失敗しても 2xx を返すことがあります。<strong>ステータスコードだけで成否を判断しない</strong>のが安全です。</li>
+    </ul>
+    <p class="caution">認証はGraphQLに入る前のミドルウェアで済ませ、認可（この人がこの項目を見てよいか）は実行中に判断します。そうしないと、部分応答として「見てよいところだけ返す」ができません。</p>
+    <a class="back" href="#compare">← やさしい説明にもどる</a>
+  </div>
+
+  <div class="deep" id="d5">
+    <h3>5. N+1と、リクエストの重さを抑える</h3>
+    <p class="sup">やさしい説明の「往復は、消えたのではなく移った」の部分</p>
+
+    <h4>なぜ N+1 が起きるのか</h4>
+    <p>GraphQLは「フィールド1つにつき関数1つ」という、とてもきれいな作りをしています。<code>Book.author</code> のリゾルバは、渡された本1冊の著者を取ってくればいい。だからこそ、本が20冊あればその関数が20回呼ばれ、素直に書くとDBへの問い合わせも20回になります。</p>
+<pre><code>{
+  books(first: 20) {   <span class="cm"># 1回：本を20冊</span>
+    title
+    author {           <span class="cm"># 20回：1冊ずつ著者を引く</span>
+      name
+    }
+  }
+}</code></pre>
+
+    <h4>まとめ読み（バッチ）で畳む</h4>
+    <p>解決策は、ひと呼吸ためてからまとめて聞くことです。同じ種類の問い合わせを短い時間だけ集め、<code>WHERE id IN (…)</code> の1回にして投げ直します。Meta（Facebook）が公開した <strong>DataLoader</strong> がこの考え方の代表で、多くの言語に同じ発想の実装があります。同一リクエスト内での重複除去（同じ著者を2回引かない）も、たいてい一緒についてきます。</p>
+    <p>実装によっては、クエリの選択集合を読んで、最初から最適化された1本のSQLに変換してくれるものもあります。</p>
+
+    <h4>デマンドコントロール — 重すぎるクエリを断る</h4>
+    <p>N+1を潰しても、「書けてしまうから重い」という問題は残ります。段階を追って手を打ちます。</p>
+    <table>
+      <tr><th>ページング</th><td>リストを返すフィールドには必ず件数の上限を。まずはここから。</td></tr>
+      <tr><th>深さ制限</th><td>入れ子の段数に上限を置く。循環する関係（友だちの友だちの…）は無限に深く書けてしまう。リストの入れ子には、さらに小さい上限を別に置くとよい。</td></tr>
+      <tr><th>広さ・バッチ制限</th><td>1操作あたりのルートフィールド数・別名の数、1リクエストに詰められる操作の数に上限を置く。浅くても、別名を100個並べれば同じだけ重い。</td></tr>
+      <tr><th>複雑度解析</th><td>型やフィールドに重みを付け、リクエスト全体の見積もりコストが上限を超えたら実行前に断る。レート制限の単位としても使える。</td></tr>
+      <tr><th>信頼できる文書</th><td>自社のクライアントだけに出すAPIなら、開発時に登録した文書だけを実行可能にする（trusted documents）。上の対策の多くが不要になるほど強い。</td></tr>
+    </table>
+    <p class="caution">レート制限は、ネットワーク層で「1分間に何リクエスト」と数えるだけでは足りません。同じ1リクエストでも重さがまったく違うからです。ビジネスロジック層で、実際に触った量に応じて数えるのが現実的です。</p>
+
+    <h4>圧縮と観測</h4>
+    <p>応答はJSONなので、GZIPなどがよく効きます（<code>Accept-Encoding: gzip</code>）。また、どのフィールドが遅いか・どのフィールドがよくエラーになるかは、フィールド単位で計測してはじめて見えます。OpenTelemetry のような仕組みで、実行の中に計器を入れておくと運用が楽になります。</p>
+    <a class="back" href="#n1">← やさしい説明にもどる</a>
+  </div>
+
+  <div class="deep" id="d6">
+    <h3>6. 認可・イントロスペクション・キャッシュ</h3>
+    <p class="sup">やさしい説明の「気をつけないと、あとで困る」の部分</p>
+
+    <h4>認可は、リゾルバの中に書かない</h4>
+    <p>「下書きは書いた本人にしか見せない」のような規則は、書こうと思えばリゾルバの中に書けます。学習や試作ならそれで十分です。ただし本番では、その規則が<strong>入口の数だけ重複します</strong>。GraphQLのほかに管理画面のAPIやバッチがあれば、同じ判断を何か所にも書くことになり、いずれズレます。</p>
+<pre><code><span class="cm">// 判断はビジネスロジック層に1か所だけ置く</span>
+export const postRepository = {
+  getBody({ user, post }) {
+    const isAuthor = user?.id === post.authorId;
+    return isAuthor ? post.body : null;
+  }
+};
+
+<span class="cm">// リゾルバは、それを呼ぶだけ</span>
+function resolvePostBody(obj, args, context) {
+  return postRepository.getBody({ user: context.user, post: obj });
+}</code></pre>
+    <p>認証（誰であるか）はGraphQLに入る前のミドルウェアで済ませ、その結果を <code>context</code> に載せて全リゾルバへ渡すのが定石です。トークンのような不透明な値ではなく、解決済みのユーザー情報を渡します。</p>
+    <p>どうしてもGraphQL層に置きたい場合は、<code>directive @auth(rule: Rule) on FIELD_DEFINITION</code> のような型システムディレクティブでスキーマに印を付ける方法もあります。ただし、その場合も実際の判断はビジネスロジック層に委ねます。</p>
+
+    <h4>イントロスペクションを止めるのは、目隠しにすぎない</h4>
+    <p>本番でイントロスペクションを閉じるのは一般的な手ですが、これは「隠す」であって「守る」ではありません。エラーメッセージの「もしかして <code>titel</code> ではなく <code>title</code> ですか？」といった親切な示唆からも、スキーマの形は推測できます。本番ではエラーの詳細も伏せ、そのうえで<strong>許可した文書だけを実行する</strong>方式と組み合わせるのが、実効性のある守り方です。</p>
+
+    <h4>キャッシュのための、全体で一意なID</h4>
+    <p>RESTではURLがそのまま「この世に1つのキー」でした。GraphQLには対応するものがないので、<strong>APIの側から一意なIDを渡す</strong>のが定石になっています。<code>id</code> フィールドを全体で一意な値に決めてしまうやり方が広く使われます（型名とIDをつないで Base64 にするなど）。</p>
+    <p>クライアント側のライブラリは、このIDをキーにして受け取ったオブジェクトを1か所に貯めます。だから別のクエリで同じ本が返ってきても、同じものとして扱えます。<code>__typename</code> と型ごとのIDを組み合わせて、クライアント側で作る手もあります。</p>
+    <p class="caution">既存のRESTを置きかえるとき、<code>id</code> だけが今までと違う値になると混乱のもとです。その場合は、従来のIDを別のフィールド（<code>legacyId</code> など）で並べて出すと衝突を避けられます。</p>
+
+    <h4>ページングは、コネクションで</h4>
+    <p>単純な <code>friends(first: 2)</code> でも件数は絞れますが、「次の2件」を取るには基準になる目印が要ります。そこで、リストを直接返さず、<strong>目印（cursor）と中身（node）の組</strong>を返す形が定着しました。</p>
+<pre><code>{
+  book(id: "B-102") {
+    reviewsConnection(first: 2, after: $cursor) {
+      totalCount
+      edges {
+        <span class="hl">cursor</span>       <span class="cm"># 次はここから、を表す目印</span>
+        node { stars comment }
+      }
+      pageInfo {
+        <span class="hl">endCursor</span>
+        <span class="hl">hasNextPage</span>  <span class="cm"># まだ続きがあるか</span>
+      }
+    }
+  }
+}</code></pre>
+    <p>件数指定（<code>offset</code>）方式に比べて、途中でデータが増えても位置がずれません。cursor は中身を推測されないよう不透明な値（Base64など）にしておくのが慣習で、そうしておけば後からページングのやり方を変えても、クライアントを直さずに済みます。</p>
+    <a class="back" href="#careful">← やさしい説明にもどる</a>
+  </div>
+</section>
+
+<section class="sibling">
+  <h2>ほかの解説ページ</h2>
+  <ul>
+    <li><a href="mcp.html"><b>MCPのしくみ</b><span>AIは、外の道具を借りて動いている。</span></a></li>
+    <li><a href="cicd.html"><b>CI/CDのしくみ</b><span>直したものを、こわがらずに届けるために。</span></a></li>
+    <li><a href="websocket.html"><b>WebSocketのしくみ</b><span>「まだ？」と聞きに行かなくてよくなった日。</span></a></li>
+    <li><a href="flyway.html"><b>Flywayのしくみ</b><span>データベースだけ、やり直しがきかない。</span></a></li>
+    <li><a href="getdown.html"><b>Getdownのしくみ</b><span>配ったあとに、直せるようにする。</span></a></li>
+    <li><a href="angular.html"><b>Angularのしくみ</b><span>画面を、部品に切り分ける。</span></a></li>
+    <li><a href="bigip.html"><b>BIG-IPのしくみ</b><span>入口を1つにして、裏を何台にでも。</span></a></li>
+    <li><a href="spring.html"><b>Springのしくみ</b><span>部品の組み立てを、任せてしまう。</span></a></li>
+    <li><a href="docker.html"><b>Dockerのしくみ</b><span>「私のPCでは動く」を、なくすために。</span></a></li>
+    <li><a href="kubernetes.html"><b>Kubernetesのしくみ</b><span>落ちたら、勝手に起き上がる。</span></a></li>
+    <li><a href="aws.html"><b>AWSのしくみ</b><span>サーバーを、買わずに借りる。</span></a></li>
+    <li><a href="nosql.html"><b>NoSQLのしくみ</b><span>表の形に、こだわらない。</span></a></li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <p>GraphQL を、たとえ話・図解・クイズでたどるやさしい解説ページです。ライブラリごとの細かな違いは、それぞれの公式ドキュメントをどうぞ。</p>
+  <p class="footmeta">最終更新日: 2026.9.7 ｜ 参考文献: <a href="https://graphql.org/learn/" target="_blank" rel="noopener">GraphQL 公式ドキュメント（Learn GraphQL）</a> ／ <a href="https://spec.graphql.org/draft/" target="_blank" rel="noopener">GraphQL 仕様（draft）</a> ／ <a href="https://graphql.github.io/graphql-over-http/draft/" target="_blank" rel="noopener">GraphQL over HTTP（draft）</a></p>
+  <p class="footver">GraphQLのしくみ　v1.0.0</p>
+</footer>
+
+</div>
+
+<script>
+"use strict";
+var APP_VERSION = "1.0.0";
+
+/* ============ 小さな色づけヘルパー ============ */
+function ky(s){ return '<span class="ky">' + s + '</span>'; }   /* キーワード・入れ子の入口 */
+function hl(s){ return '<span class="hl">' + s + '</span>'; }   /* 葉のフィールド */
+function st(s){ return '<span class="st">' + s + '</span>'; }   /* 値 */
+function cm(s){ return '<span class="cm">' + s + '</span>'; }   /* コメント */
+
+/* ============ 送るものと、返るもの ============ */
+var FIELDS = [
+  {key:"title",    label:"タイトル",   leaves:1},
+  {key:"year",     label:"出版年",     leaves:1},
+  {key:"aname",    label:"著者の名前", leaves:1},
+  {key:"acountry", label:"著者の国",   leaves:1},
+  {key:"reviews",  label:"レビュー",   leaves:4}
+];
+var picked = {title:true, year:false, aname:true, acountry:false, reviews:false};
+
+function buildQuery(){
+  var L = [];
+  L.push(ky("query") + " BookPage {");
+  L.push('  ' + ky("book") + '(id: ' + st('"B-102"') + ') {');
+
+  var any = false;
+  if(picked.title){ L.push('    ' + hl("title")); any = true; }
+  if(picked.year){  L.push('    ' + hl("year"));  any = true; }
+  if(picked.aname || picked.acountry){
+    L.push('    ' + ky("author") + ' {');
+    if(picked.aname)    L.push('      ' + hl("name"));
+    if(picked.acountry) L.push('      ' + hl("country"));
+    L.push('    }');
+    any = true;
+  }
+  if(picked.reviews){
+    L.push('    ' + ky("reviews") + '(first: ' + st("2") + ') {');
+    L.push('      ' + hl("stars"));
+    L.push('      ' + hl("comment"));
+    L.push('    }');
+    any = true;
+  }
+  if(!any) L.push('    ' + cm("# ← ここが空。中身の指定がない"));
+
+  L.push('  }');
+  L.push('}');
+  return L.join("\n");
+}
+
+function buildResponse(){
+  var any = picked.title || picked.year || picked.aname || picked.acountry || picked.reviews;
+  if(!any){
+    return [
+      '{',
+      '  ' + ky('"errors"') + ': [',
+      '    {',
+      '      ' + hl('"message"') + ': ' + st('"Field \\"book\\" must have a selection of subfields."'),
+      '    }',
+      '  ]',
+      '}'
+    ].join("\n");
+  }
+
+  var inner = [];
+  if(picked.title) inner.push('      ' + hl('"title"') + ': ' + st('"銀河の図書館"'));
+  if(picked.year)  inner.push('      ' + hl('"year"') + ': 2019');
+  if(picked.aname || picked.acountry){
+    var a = [];
+    if(picked.aname)    a.push('        ' + hl('"name"') + ': ' + st('"南 ゆかり"'));
+    if(picked.acountry) a.push('        ' + hl('"country"') + ': ' + st('"日本"'));
+    inner.push('      ' + ky('"author"') + ': {\n' + a.join(",\n") + '\n      }');
+  }
+  if(picked.reviews){
+    inner.push('      ' + ky('"reviews"') + ': [\n' +
+      '        { ' + hl('"stars"') + ': 5, ' + hl('"comment"') + ': ' + st('"夜ふかし確定。"') + ' },\n' +
+      '        { ' + hl('"stars"') + ': 4, ' + hl('"comment"') + ': ' + st('"地図がすごい。"') + ' }\n' +
+      '      ]');
+  }
+
+  return [
+    '{',
+    '  ' + ky('"data"') + ': {',
+    '    ' + ky('"book"') + ': {',
+    inner.join(",\n"),
+    '    }',
+    '  }',
+    '}'
+  ].join("\n");
+}
+
+function renderMirror(){
+  var q = document.getElementById("pane-query");
+  var r = document.getElementById("pane-response");
+  var t = document.getElementById("mirror-tally");
+  var n = document.getElementById("mirror-note");
+  if(!q || !r) return;
+
+  q.innerHTML = '<code>' + buildQuery() + '</code>';
+  r.innerHTML = '<code>' + buildResponse() + '</code>';
+
+  var count = 0, on = 0;
+  FIELDS.forEach(function(f){ if(picked[f.key]){ count += f.leaves; on++; } });
+
+  t.innerHTML = '返ってくる値　<b>' + count + '個</b>　／　ブラウザとサーバーの往復　<b>1回</b>';
+
+  if(on === 0){
+    n.innerHTML = 'オブジェクト型のフィールドには、<strong>中身の指定が必ず要ります</strong>。空のままでは実行にすら進まず、スキーマと照らす段階（検証）ではじかれます。';
+  } else if(on === FIELDS.length){
+    n.innerHTML = 'ぜんぶ選んでも、往復は1回のまま。<span class="pen">増えるのは通信の回数ではなく、1通の中身だけです。</span>';
+  } else {
+    n.innerHTML = '選んだぶんだけが返っています。<span class="pen">押していない項目は、そもそも運ばれてきません。</span>';
+  }
+}
+
+function initMirror(){
+  var host = document.getElementById("field-chips");
+  if(!host) return;
+
+  FIELDS.forEach(function(f){
+    var b = document.createElement("button");
+    b.type = "button";
+    b.textContent = f.label;
+    b.setAttribute("aria-pressed", picked[f.key] ? "true" : "false");
+    b.addEventListener("click", function(){
+      picked[f.key] = !picked[f.key];
+      b.setAttribute("aria-pressed", picked[f.key] ? "true" : "false");
+      renderMirror();
+    });
+    host.appendChild(b);
+  });
+  renderMirror();
+}
+
+/* ============ 往復の回数 ============ */
+function initTrip(){
+  var rest = document.getElementById("tp-rest");
+  var gql  = document.getElementById("tp-gql");
+  var rBtn = document.getElementById("btn-rest");
+  var gBtn = document.getElementById("btn-gql");
+  var tally = document.getElementById("trip-tally");
+  if(!rest || !gql) return;
+
+  function show(isRest){
+    rest.classList.toggle("hidden", !isRest);
+    gql.classList.toggle("hidden", isRest);
+    rBtn.setAttribute("aria-pressed", isRest ? "true" : "false");
+    gBtn.setAttribute("aria-pressed", isRest ? "false" : "true");
+    tally.innerHTML = isRest
+      ? '画面1つを描くのに必要な往復　<b>4回</b>'
+      : '画面1つを描くのに必要な往復　<b>1回</b>';
+  }
+  rBtn.addEventListener("click", function(){ show(true); });
+  gBtn.addEventListener("click", function(){ show(false); });
+}
+
+/* ============ 開いて読むリスト（共通） ============ */
+function buildTree(hostId, items, labelA, labelB, idPrefix){
+  var host = document.getElementById(hostId);
+  if(!host) return;
+
+  items.forEach(function(s, i){
+    var wrap = document.createElement("div");
+    wrap.className = "step";
+    wrap.setAttribute("aria-expanded", "false");
+    var btnId = idPrefix + "-btn-" + i, panId = idPrefix + "-pan-" + i;
+
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.id = btnId;
+    btn.setAttribute("aria-controls", panId);
+    btn.setAttribute("aria-expanded", "false");
+    btn.innerHTML = '<span class="yr">' + s.y + '</span><span class="nm">' + s.n +
+                    '</span><span class="plus" aria-hidden="true"></span>';
+
+    var pan = document.createElement("div");
+    pan.className = "detail"; pan.id = panId; pan.hidden = true;
+    pan.setAttribute("role", "region");
+    pan.setAttribute("aria-labelledby", btnId);
+    pan.innerHTML = '<p class="trouble">' + labelA + s.a + '</p>' +
+                    '<p class="fix">' + labelB + s.b + '</p>';
+
+    btn.addEventListener("click", function(){
+      var open = pan.hidden;
+      pan.hidden = !open;
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      wrap.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    wrap.appendChild(btn); wrap.appendChild(pan); host.appendChild(wrap);
+  });
+}
+
+var TYPES = [
+  {y:"type", n:"オブジェクト型",
+   a:'<code>type Book { title: String! author: Author }</code>',
+   b:"フィールドを持つ、いちばん基本の型。スキーマのほとんどはこれになる。型が別の型を指すことで、全体がグラフの形になる。"},
+  {y:"scalar", n:"スカラー型",
+   a:'<code>Int</code> <code>Float</code> <code>String</code> <code>Boolean</code> <code>ID</code> の5つが最初から用意されている。<code>scalar Date</code> のように自分で足すこともできる。',
+   b:"クエリの葉っぱ。これ以上ほれない値。<code>ID</code> は文字列として運ばれるが、「人が読むためのものではない」という意思表示になる。"},
+  {y:"enum", n:"列挙型",
+   a:'<code>enum Currency { JPY USD EUR }</code>',
+   b:"決まった値のどれか、を表す特別なスカラー。変な値が引数に来たら実行前にはじけるし、「この項目は3種類しかない」ことを型で伝えられる。"},
+  {y:"interface", n:"インターフェース型",
+   a:'<code>interface Node { id: ID! }</code> ／ <code>type Book implements Node { … }</code>',
+   b:"「このフィールドは必ず持つ」を約束させる。実装した型はどれも同じフィールドを持つので、共通部分はそのまま書ける。個別のフィールドは <code>... on Book</code> で指定する。"},
+  {y:"union", n:"ユニオン型",
+   a:'<code>union SearchResult = Book | Author</code>',
+   b:"「このどれかが返る」だけを表す。共通のフィールドは持たないので、型を指定しないと何も書けない。検索結果のように、種類のちがうものが混ざる場面で使う。"},
+  {y:"input", n:"入力オブジェクト型",
+   a:'<code>input ReviewInput { stars: Int! comment: String }</code>',
+   b:"引数に渡すためのかたまり。出力用の <code>type</code> とは別物で、混ぜて使うことはできない。mutation でまとまった値を渡すときによく使う。"}
+];
+
+var LIFE = [
+  {y:"①", n:"受け取って、読み取る（解析）",
+   a:"文字の並びのままでは、<b>何を聞かれているのか分からない</b>。",
+   b:"送られてきた文章を、機械が扱える形に組み立て直す。かっこの閉じ忘れのような書きまちがいは、ここで構文エラーになる。"},
+  {y:"②", n:"スキーマと照らす（検証）",
+   a:"存在しないフィールドを聞かれても、<b>実行してみるまで気づけない</b>。",
+   b:"型システムと突き合わせ、書かれたフィールドが実在するか、型が合っているかを確かめる。ここではじかれると実行は始まらないので、<code>data</code> は返らない。開発ツールの補完や警告も、この型情報で動いている。"},
+  {y:"③", n:"フィールドごとに関数を呼ぶ（実行）",
+   a:"型だけあっても、<b>中身のデータは入ってこない</b>。",
+   b:"フィールド1つひとつに用意された関数（リゾルバ）が呼ばれ、次の値を返す。オブジェクトが返ればさらに下へ、スカラー型か列挙型にたどり着いたら打ち止め。どこからデータを取ってくるかは自由で、GraphQLは口を出さない。"},
+  {y:"④", n:"送られてきた形に、詰め直す",
+   a:"取れた値がばらばらのままだと、<b>どれがどこの値なのか分からない</b>。",
+   b:"葉から根へ、フィールド名（別名があればその名前）をキーにして組み立てていく。だから結果は、送ったクエリとぴったり同じ形になる。"},
+  {y:"⑤", n:"data と errors で返す",
+   a:"途中で1つ失敗しただけで、<b>成功したぶんまで捨てる</b>ことになる。",
+   b:"トップレベルは <code>data</code> ／ <code>errors</code> ／ <code>extensions</code> の3つだけ。実行中の失敗なら、取れたぶんを <code>data</code> に残したまま <code>errors</code> を添えて返す（部分応答）。"}
+];
+
+/* ============ 往復は、消えたのではなく移った ============ */
+function initCalc(){
+  var c = document.getElementById("cnt");
+  var b = document.getElementById("batch");
+  var res = document.getElementById("calc-result");
+  if(!c || !b) return;
+
+  [3,10,50,100].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v + "件";
+    if(v === 10) o.selected = true;
+    c.appendChild(o);
+  });
+  [{v:"0",t:"しない"},{v:"1",t:"する"}].forEach(function(x){
+    var o = document.createElement("option");
+    o.value = x.v; o.textContent = x.t;
+    b.appendChild(o);
+  });
+
+  function update(){
+    var n = parseInt(c.value, 10);
+    var batched = b.value === "1";
+    var restTrips = 1 + n;          /* 一覧を1回、そのあと1件ずつ */
+    var gqlTrips  = 1;              /* まとめて1通 */
+    var dbQueries = batched ? 2 : 1 + n;
+    var max = restTrips;
+
+    var html = '<p class="rline">一覧の ' + n + ' 件それぞれに、著者名を並べる画面。' +
+               '窓口ごとのAPIなら <strong>' + restTrips + '回</strong> の往復、' +
+               'GraphQLなら <strong>' + gqlTrips + '回</strong>。' +
+               'そのとき、サーバーからデータベースへの問い合わせは <strong>' + dbQueries + '回</strong>。</p>';
+
+    html += '<div class="bars">';
+    html += '<div><p class="bar-label">窓口ごとのAPI　ブラウザ↔サーバーの往復</p>' +
+            '<div class="bar"><span style="width:' + (restTrips / max * 100) + '%"></span></div></div>';
+    html += '<div><p class="bar-label">GraphQL　ブラウザ↔サーバーの往復</p>' +
+            '<div class="bar good"><span style="width:' + (gqlTrips / max * 100) + '%"></span></div></div>';
+    html += '<div><p class="bar-label">GraphQL　サーバー↔データベースの問い合わせ' +
+            (batched ? '（まとめ読みあり）' : '（まとめ読みなし）') + '</p>' +
+            '<div class="bar' + (batched ? ' good' : '') + '"><span style="width:' +
+            (dbQueries / max * 100) + '%"></span></div></div>';
+    html += '</div>';
+
+    html += '<p class="rline" style="margin:0">' +
+            (batched
+              ? '著者を1件ずつ引かずに、<code>WHERE id IN (…)</code> の1回にまとめました。' +
+                'DBへの問い合わせは <strong>2回</strong>（本の一覧で1回、著者をまとめて1回）。' +
+                '<span class="pen">ここではじめて、速くなります。</span>'
+              : 'クライアント側の往復は、たしかに1回になりました。ところがサーバーの中では、' +
+                '<span class="pen">同じ ' + (1 + n) + ' 回が起きています。</span>' +
+                'フィールドごとに関数を書ける気持ちよさの、そのままの裏側です。' +
+                'まとめ読みを「する」に変えてみてください。') +
+            '</p>';
+
+    res.innerHTML = html;
+  }
+
+  c.addEventListener("change", update);
+  b.addEventListener("change", update);
+  update();
+}
+
+/* ============ クイズ ============ */
+var QUIZ = [
+  {
+    q:"GraphQLで、返ってくるレスポンスの形を決めているのは？",
+    c:["サーバーが窓口ごとに決めている","クライアントが書いたクエリの形","データベースの表の形","HTTPのステータスコード"],
+    a:1,
+    e:"ここがGraphQLの一番の特徴です。応答は data というキーの下に、送ったクエリと同じ形で返ります。だから、書いていない項目は返ってきませんし、書けば1通でまとめて取れます。"
+  },
+  {
+    q:"スキーマに無いフィールドを書いて送ると、いつ気づける？",
+    c:["実行されて、null が返ってから","実行の前。スキーマと照らす検証ではじかれる","気づけない","データベースがエラーを返したとき"],
+    a:1,
+    e:"解析のあと、実行の前に検証が入ります。ここではじかれた場合は実行そのものが始まらないので、data は返らず errors だけが返ります。開発ツールが書きながら間違いを教えてくれるのも、同じ型情報を見ているからです。"
+  },
+  {
+    q:"1つの mutation に、削除を2つ並べて書いた。どう実行される？",
+    c:["同時に、並列で実行される","上から順に1つずつ実行される","2つ目は無視される","1つのトランザクションになる"],
+    a:1,
+    e:"query のフィールドは並列でよいことになっていますが、mutation のいちばん外側のフィールドは直列に実行されます。ただし直列なだけで、トランザクションではありません。1つ目が成功して2つ目が失敗したとき、1つ目を取り消すしくみはGraphQL側にはありません。"
+  },
+  {
+    q:"GraphQLにしたら、ブラウザからの往復が1回になった。サーバーの中では？",
+    c:["問い合わせも1回になる","何もしなければ、一覧の件数ぶんの問い合わせが起きる","データベースが不要になる","キャッシュが自動で効く"],
+    a:1,
+    e:"N+1問題です。フィールドごとに関数が呼ばれるので、20件の一覧なら著者を引く関数も20回呼ばれます。同じ種類の問い合わせをためて1回にまとめる仕組み（DataLoaderなど）を入れて、はじめて速くなります。"
+  },
+  {
+    q:"公開中のAPIに、新しいフィールドを1つ足した。既存のクライアントは？",
+    c:["応答が変わるので、直す必要がある","何も変わらない。自分が書いたフィールドしか受け取らないから","エラーになる","バージョンを上げないと動かない"],
+    a:1,
+    e:"だから多くのGraphQL APIはバージョンを切りません。消したいフィールドには @deprecated で印をつけ、使われなくなったのを確かめてから消す、という進め方をします。"
+  }
+];
+
+var qIndex = 0, qScore = 0;
+
+function renderQuiz(){
+  var host = document.getElementById("quiz");
+  if(!host) return;
+
+  if(qIndex >= QUIZ.length){
+    var msg = qScore === 5 ? "全問正解。もう人に説明できるレベル。"
+            : qScore >= 3 ? "いい線いってる。まちがえた問題ほど、覚えて帰れる。"
+            : "ここからが面白いところ。上の「1回のリクエストで、何が起きているか」をもう一度ひらいてみよう。";
+    host.innerHTML = '<p class="score">結果：' + qScore + ' / ' + QUIZ.length + ' 問正解</p>' +
+                     '<p style="margin:0 0 14px">' + msg + '</p>' +
+                     '<button class="qnext" type="button" id="again">もう一度やる</button>';
+    document.getElementById("again").addEventListener("click", function(){
+      qIndex = 0; qScore = 0; renderQuiz();
+    });
+    return;
+  }
+
+  var item = QUIZ[qIndex];
+  var html = '<div class="qhead"><span class="qcount">第' + (qIndex+1) + '問 / ' + QUIZ.length + '問</span></div>' +
+             '<p class="qtext">' + item.q + '</p><div class="choices">';
+  item.c.forEach(function(text, i){
+    html += '<button class="choice" type="button" data-i="' + i + '">' + text + '</button>';
+  });
+  html += '</div><div class="answer" id="answer" hidden></div>';
+  host.innerHTML = html;
+
+  var buttons = host.querySelectorAll(".choice");
+  Array.prototype.forEach.call(buttons, function(b){
+    b.addEventListener("click", function(){
+      var pickedIdx = parseInt(b.dataset.i, 10);
+      var ok = pickedIdx === item.a;
+      if(ok) qScore++;
+
+      Array.prototype.forEach.call(buttons, function(x, i){
+        x.disabled = true;
+        if(i === item.a) x.classList.add("correct");
+        else if(i === pickedIdx) x.classList.add("wrong");
+      });
+
+      var ans = document.getElementById("answer");
+      ans.hidden = false;
+      ans.innerHTML = '<span class="verdict ' + (ok ? "ok" : "ng") + '">' +
+                      (ok ? "正解！" : "残念、正解は「" + item.c[item.a].replace(/<[^>]+>/g,"") + "」") + '</span>' +
+                      item.e +
+                      '<div><button class="qnext" type="button" id="next">' +
+                      (qIndex === QUIZ.length - 1 ? "結果を見る" : "次の問題へ") + '</button></div>';
+      document.getElementById("next").addEventListener("click", function(){
+        qIndex++; renderQuiz();
+      });
+      document.getElementById("next").focus();
+    });
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  document.getElementById("version").textContent = "v" + APP_VERSION;
+  initMirror();
+  initTrip();
+  buildTree("tree-types", TYPES, "📝 書き方：", "💡 これは何のため：", "ty");
+  buildTree("tree-life",  LIFE,  "😖 これがないと：", "💡 やっていること：", "lf");
+  initCalc();
+  renderQuiz();
+});
+</script>
+</body>
+</html>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>やさしい技術解説 — 用語集</title>
-<meta name="description" content="MCP・CI/CD・WebSocket・NoSQL などを、たとえ話と図解とクイズでたどる解説シリーズ。更新情報と、各ページの用語をまとめた索引つき。">
+<meta name="description" content="MCP・CI/CD・WebSocket・NoSQL・GraphQL などを、たとえ話と図解とクイズでたどる解説シリーズ。更新情報と、各ページの用語をまとめた索引つき。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -15,7 +15,7 @@
 
 <header class="topbar">
   <span class="logo">やさしい技術解説</span>
-  <span class="ver" id="version">v1.6.0</span>
+  <span class="ver" id="version">v1.7.0</span>
   <span class="from">用語集トップ</span>
 </header>
 
@@ -66,14 +66,14 @@
 <footer>
   <p>やさしい技術解説シリーズ。たとえ話・図解・クイズで、技術のことばを「なんのために生まれたか」から説明しています。</p>
   <p class="footmeta">最終更新日: 2026.9.7（各ページの参考文献は、それぞれのページ末尾に記載）</p>
-  <p class="footver">用語集トップ　v1.6.0</p>
+  <p class="footver">用語集トップ　v1.7.0</p>
 </footer>
 
 </div>
 
 <script>
 "use strict";
-var APP_VERSION = "1.6.0";
+var APP_VERSION = "1.7.0";
 
 /* ============ 更新情報 ============ */
 /* type は NEWS_TYPES のキー。page を書くと、そのページの帯が並びます（省略可） */
@@ -84,6 +84,8 @@ var NEWS_TYPES = {
 };
 
 var NEWS = [
+  {date:"2026.9.7", type:"new", page:"graphql",
+   body:'解説ページ「<a href="graphql.html">GraphQLのしくみ</a>」を追加しました。送るクエリと返るJSONを、並べて動かせます。'},
   {date:"2026.9.7", type:"update",
    body:'更新情報に、種別のしぼりこみと「もっと見る」を足しました。件数が増えても、探している変更にたどりつけます。'},
   {date:"2026.9.7", type:"new", page:"nosql",
@@ -173,6 +175,12 @@ var PAGES = [
     title:"NoSQLのしくみ",
     q:"表の形に、こだわらない。",
     meta:"表をやめた理由と、そのかわりに何をゆずったのか。4つの置き方のちがいから。"
+  },
+  {
+    key:"graphql", file:"graphql.html", no:"13",
+    title:"GraphQLのしくみ",
+    q:"ほしい形を、こちらから書く。",
+    meta:"返る形を決める役が、サーバーからクライアントへ移った話。詳細章つき。"
   }
 ];
 
@@ -384,7 +392,31 @@ var TERMS = [
   {t:"ホットスポット", read:"ほっとすぽっと", page:"nosql", anchor:"#careful",
    d:"分けたはずのアクセスが、特定の1台に集中してしまう状態。キーの選び方をまちがえると起きる。"},
   {t:"CAP定理", read:"CAP", page:"nosql", anchor:"#words",
-   d:"ネットワークが分断されたとき、「全部の台で同じ答え」と「止まらないこと」は同時に満たせない、という整理。"}
+   d:"ネットワークが分断されたとき、「全部の台で同じ答え」と「止まらないこと」は同時に満たせない、という整理。"},
+
+  /* --- GraphQL --- */
+  {t:"GraphQL", read:"GraphQL", page:"graphql", anchor:"",
+   d:"APIのための問い合わせ言語と、その実行のしくみ。ほしいデータの形をクライアントが書いて送り、サーバーはその形のまま返す。"},
+  {t:"スキーマ", read:"すきーま", page:"graphql", anchor:"#schema",
+   d:"そのAPIで何が聞けるかを型で書き表したもの。クライアントが書けるのはここに載っていることだけで、実行前に照らし合わされる。"},
+  {t:"SDL", read:"SDL", page:"graphql", anchor:"#schema",
+   d:"スキーマ定義言語。スキーマを言語に依存しない形で書くための記法。type Book { title: String! } のように書く。"},
+  {t:"リゾルバ", read:"りぞるば", page:"graphql", anchor:"#life",
+   d:"フィールド1つひとつに対応する、値を返す関数。GraphQLはこれを呼び集めて結果を組み立てる。データの取り方そのものは自由。"},
+  {t:"ミューテーション", read:"みゅーてーしょん", page:"graphql", anchor:"#three",
+   d:"データを書きかえるためのGraphQLの操作。副作用を持てるのはいちばん外側のフィールドだけで、それらは上から順に1つずつ実行される。"},
+  {t:"フラグメント", read:"ふらぐめんと", page:"graphql", anchor:"#d1",
+   d:"フィールドのまとまりに名前をつけて、いろいろなクエリから使い回すしくみ。画面の部品ごとに必要な項目を書いておくのに向く。"},
+  {t:"ディレクティブ", read:"でぃれくてぃぶ", page:"graphql", anchor:"#d1",
+   d:"@ ではじまる注釈。仕様が定めているのは @include／@skip（クエリ側）と @deprecated（スキーマ側）など。"},
+  {t:"イントロスペクション", read:"いんとろすぺくしょん", page:"graphql", anchor:"#words",
+   d:"スキーマ自身に「どんな型がある？」と聞ける仕組み。開発ツールの補完はこれで動いている。本番では閉じることも多い。"},
+  {t:"N+1問題", read:"Nたすいちもんだい", page:"graphql", anchor:"#n1",
+   d:"一覧のN件それぞれについて、さらに1回ずつ問い合わせが起きてしまう状態。まとめ読み（バッチ）で1〜2回に畳むのが定石。"},
+  {t:"コネクション", read:"こねくしょん", page:"graphql", anchor:"#d6",
+   d:"edges・node・cursor・pageInfo を使った、カーソル方式のページングの型。件数の上限をスキーマの形で表せる。"},
+  {t:"永続化文書", read:"えいぞくかぶんしょ", page:"graphql", anchor:"#d4",
+   d:"使うクエリをあらかじめサーバーに登録しておき、実行時はそのIDだけを送る方式。通信量が減り、許可した文書だけを実行させられる。"}
 ];
 
 /* ============ 表示 ============ */
