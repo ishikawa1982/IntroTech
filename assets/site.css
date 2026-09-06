@@ -233,6 +233,8 @@ svg{display:block;width:100%;height:auto}
 .back:hover{color:var(--red)}
 
 footer{margin-top:52px;border-top:2px solid var(--ink);padding:20px 0 46px;font-size:13px;color:var(--ink-soft)}
+.footmeta{margin:6px 0;font-size:12.5px}
+.footmeta a{color:inherit}
 .footver{font-family:var(--font-round);font-weight:700;color:var(--ink)}
 
 @media (max-width:480px){
