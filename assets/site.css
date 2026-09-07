@@ -373,6 +373,7 @@ footer{margin-top:52px;border-top:2px solid var(--ink);padding:20px 0 46px;font-
 
 /* ---- 用語索引の帯（追加分） ---- */
 .src.graphql{background:var(--mk-green)}
+.src.db2{background:var(--mk-cyan)}
 
 /* ---- コード表示（詳細章の外でも使う） ---- */
 main code{
@@ -410,3 +411,8 @@ main pre code{background:none;border:0;color:inherit;padding:0;font-size:inherit
   .panes{grid-template-columns:1fr}
   .pane .codeblock{min-height:0}
 }
+
+/* ---- 詳細章の表（見出し列が長いとき） ---- */
+.deep .tablescroll{overflow-x:auto;margin:0 0 12px}
+.deep .tablescroll table{margin:0}
+.deep table.wrapth th{white-space:normal;word-break:keep-all}

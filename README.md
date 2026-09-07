@@ -1,6 +1,6 @@
 # やさしい技術解説シリーズ
 
-MCP・CI/CD・WebSocket・Flyway・Getdown・Angular・BIG-IP・Spring・Docker・Kubernetes・AWS・NoSQL・GraphQL を、
+MCP・CI/CD・WebSocket・Flyway・Getdown・Angular・BIG-IP・Spring・Docker・Kubernetes・AWS・NoSQL・GraphQL・Db2 を、
 たとえ話・図解・クイズでたどるやさしい解説サイトです。
 
 ## 見る
@@ -17,7 +17,7 @@ GitHub Pages で公開する場合は、リポジトリの Settings → Pages �
 index.html        トップページ（更新情報＋一覧＋横断用語索引）
 mcp.html / cicd.html / websocket.html / flyway.html / getdown.html
 angular.html / bigip.html / spring.html / docker.html / kubernetes.html
-aws.html / nosql.html / graphql.html
+aws.html / nosql.html / graphql.html / db2.html
 assets/site.css   全ページ共通のスタイル
 ```
 
