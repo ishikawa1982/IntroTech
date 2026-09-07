@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Db2の統計と再編成のしくみ — 数え直して、並べ直す</title>
+<meta name="description" content="Db2 for LUW の RUNSTATS（統計収集）と REORG（再編成）を、たとえ話・図解・クイズでたどるやさしい解説ページ。REORGCHKの読み方と自動保守まで。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="topbar">
+  <span class="logo">Db2の統計と再編成</span>
+  <span class="ver" id="version">v1.0.0</span>
+  <a class="home" href="index.html">← 用語集トップ</a>
+</header>
+
+<main>
+
+<div class="hero" id="basic">
+  <h1>同じSQLが、<br>ある日<span class="mark">おそくなる</span>。</h1>
+  <p>昨日まで1秒で返っていた検索が、今日は30秒かかる。プログラムは1行も変えていない。——データベースは「どうやってデータを取りに行くか」を毎回自分で決めていて、その判断材料は<strong>統計情報</strong>、つまり表の中身を数えた記録です。記録が古びれば判断はずれます。それとは別に、表そのものが散らかっていれば、同じ行数を読むのに何倍もページをめくることになる。前者を直すのが <strong>RUNSTATS</strong>、後者を直すのが <strong>REORG</strong>。ここでは Db2 for LUW（Linux／UNIX／Windows）の話として進めます。</p>
+
+  <div class="chain">
+    <p class="chain-title">「おそくなる」までの道すじ——</p>
+    <ol>
+      <li>
+        <span class="node now">データが動く<small>いま</small></span>
+        <span class="say">毎日、行が足され、消され、更新されていく</span>
+      </li>
+      <li class="arrowline">でも、統計をとったのは3か月前なので</li>
+      <li>
+        <span class="node">古い数字で計画される<small>見積もりのズレ</small></span>
+        <span class="say">「10件しかない」つもりで選んだ方法で、100万件を処理してしまう</span>
+      </li>
+      <li class="arrowline">それとは別に、表の中では</li>
+      <li>
+        <span class="node">行が散らばる<small>すきま・はみ出し</small></span>
+        <span class="say">消した跡のすきま。更新であふれて、別ページに移った行</span>
+      </li>
+      <li class="arrowline">どちらも、読むページ数を増やすので</li>
+      <li>
+        <span class="node robot">RUNSTATS<small>数え直す</small></span>
+        <span class="say">いまの中身を数えて、カタログに書き直す。行は動かさない</span>
+      </li>
+      <li class="arrowline">それでも詰まりが残るなら</li>
+      <li>
+        <span class="node goal">REORG<small>並べ直す</small></span>
+        <span class="say">生きている行を詰め直し、索引の順に並べ直す</span>
+      </li>
+    </ol>
+  </div>
+  <p class="lead" style="margin-bottom:0">「<span class="pen">遅い＝索引が足りない</span>」とはかぎりません。今日のいちばん大事なところは、遅くなる原因に<strong>情報の古さ</strong>と<strong>置き方の乱れ</strong>という別々の2種類がある、ということです。</p>
+</div>
+
+<section id="why">
+  <h2>なんで、こんな作業が要るの？</h2>
+  <p class="lead">答えはシンプル。<span class="mark pink">Db2が毎回、経路を自分で選んでいるから。</span></p>
+
+  <div class="notes">
+    <div class="note">
+      <h3>経路は、実行のたびに選び直される</h3>
+      <p>SQLに書くのは「何がほしいか」だけで、「どう取りに行くか」は書きません。表を頭から全部読むのか、索引をたどるのか、どの表から先に読むのか——決めるのは<strong>オプティマイザ</strong>という係です。</p>
+      <p class="eg">その判断材料が、表の行数・ページ数・列の値の散らばり・索引の状態。これらをまとめて統計情報と呼びます。</p>
+    </div>
+
+    <div class="note">
+      <h3>材料が古いと、堂々とまちがえる</h3>
+      <p>統計は、RUNSTATSを流した瞬間の記録です。放っておいても勝手には新しくなりません。1万件に育った表を「10件」だと思っているオプティマイザは、10件向けのやり方を自信を持って選びます。</p>
+      <p class="eg">やっかいなのは、エラーにならないこと。ただ静かに遅くなるので、原因にたどりつくのに時間がかかります。</p>
+    </div>
+
+    <div class="note">
+      <h3>情報が正しくても、置き方は乱れる</h3>
+      <p>行を削除しても、その跡地はすぐには詰まりません。更新で行が長くなると、元のページに入りきらず別ページへ<strong>はみ出し</strong>、元の場所には印だけが残ります。</p>
+      <p class="eg">こうなると、同じ行数を読むのに触るページが増えます。これは統計を取り直しても1ミリも直りません。REORGの担当です。</p>
+    </div>
+  </div>
+  <a class="more" href="#d1"><span class="tag">詳しく</span>統計は、どこに書かれているのか</a>
+</section>
+
+<section id="two">
+  <h2>2つのコマンドは、別のものを直している</h2>
+  <p class="lead">ボタンで切りかえて、表の中を見てみよう。</p>
+
+  <div class="board">
+    <div class="switch">
+      <button type="button" id="btn-now" aria-pressed="true">いまの表</button>
+      <button type="button" id="btn-reorg" aria-pressed="false">REORGのあと</button>
+    </div>
+    <p class="tally" id="tally">全件読むのに、さわるページ　<b>6</b> ページ</p>
+    <figure style="margin:0">
+      <svg viewBox="0 0 600 260" role="img" aria-label="削除の跡とはみ出した行で6ページに散らばっていた12行が、REORGのあとは3ページに収まることを示す図">
+        <g font-family="'Zen Maru Gothic',sans-serif">
+
+          <g id="tb-now">
+            <text x="300" y="22" text-anchor="middle" font-size="15" font-weight="700" fill="#E4453A">削除の跡と、はみ出した行が混ざっている</text>
+
+            <g stroke="#16263F" stroke-width="2" fill="#fff">
+              <rect x="20" y="50" width="80" height="140" rx="8"/>
+              <rect x="116" y="50" width="80" height="140" rx="8"/>
+              <rect x="212" y="50" width="80" height="140" rx="8"/>
+              <rect x="308" y="50" width="80" height="140" rx="8"/>
+              <rect x="404" y="50" width="80" height="140" rx="8"/>
+              <rect x="500" y="50" width="80" height="140" rx="8"/>
+            </g>
+            <g stroke="#16263F" stroke-width="1.5">
+              <line x1="20" y1="74" x2="100" y2="74"/><line x1="116" y1="74" x2="196" y2="74"/>
+              <line x1="212" y1="74" x2="292" y2="74"/><line x1="308" y1="74" x2="388" y2="74"/>
+              <line x1="404" y1="74" x2="484" y2="74"/><line x1="500" y1="74" x2="580" y2="74"/>
+            </g>
+            <g font-size="11" font-weight="700" fill="#16263F" text-anchor="middle">
+              <text x="60" y="68">P1</text><text x="156" y="68">P2</text><text x="252" y="68">P3</text>
+              <text x="348" y="68">P4</text><text x="444" y="68">P5</text><text x="540" y="68">P6</text>
+            </g>
+
+            <g fill="#AEE6A6" stroke="#16263F" stroke-width="1.5">
+              <rect x="28" y="84" width="64" height="16" rx="3"/>
+              <rect x="28" y="106" width="64" height="16" rx="3"/>
+              <rect x="28" y="128" width="64" height="16" rx="3"/>
+              <rect x="124" y="84" width="64" height="16" rx="3"/>
+              <rect x="124" y="106" width="64" height="16" rx="3"/>
+              <rect x="220" y="84" width="64" height="16" rx="3"/>
+              <rect x="220" y="128" width="64" height="16" rx="3"/>
+              <rect x="316" y="84" width="64" height="16" rx="3"/>
+              <rect x="316" y="106" width="64" height="16" rx="3"/>
+              <rect x="412" y="84" width="64" height="16" rx="3"/>
+              <rect x="412" y="128" width="64" height="16" rx="3"/>
+            </g>
+
+            <g fill="#E9EFF5" stroke="#AFC0D0" stroke-width="1.5" stroke-dasharray="4 3">
+              <rect x="28" y="150" width="64" height="16" rx="3"/>
+              <rect x="124" y="150" width="64" height="16" rx="3"/>
+              <rect x="220" y="106" width="64" height="16" rx="3"/>
+              <rect x="220" y="150" width="64" height="16" rx="3"/>
+              <rect x="316" y="128" width="64" height="16" rx="3"/>
+              <rect x="316" y="150" width="64" height="16" rx="3"/>
+              <rect x="412" y="106" width="64" height="16" rx="3"/>
+              <rect x="412" y="150" width="64" height="16" rx="3"/>
+            </g>
+
+            <rect x="124" y="128" width="64" height="16" rx="3" fill="#FFE066" stroke="#16263F" stroke-width="1.5"/>
+            <rect x="508" y="84" width="64" height="16" rx="3" fill="#FFB3CE" stroke="#16263F" stroke-width="1.5"/>
+
+            <path d="M156 144 L156 208 L540 208 L540 106" fill="none" stroke="#E4453A" stroke-width="2"/>
+            <polygon points="540,98 534,110 546,110" fill="#E4453A"/>
+            <text x="348" y="224" text-anchor="middle" font-size="12" fill="#E4453A" font-family="'Zen Kaku Gothic New',sans-serif">更新ではみ出した行。元の場所には印だけが残る</text>
+            <text x="300" y="246" text-anchor="middle" font-size="13" fill="#16263F" font-family="'Zen Kaku Gothic New',sans-serif">生きている行は12。それが6ページに散らばっている</text>
+          </g>
+
+          <g id="tb-reorg" class="hidden">
+            <text x="300" y="22" text-anchor="middle" font-size="15" font-weight="700" fill="#1E8A4C">前から詰め直して、はみ出しも解消</text>
+
+            <g stroke="#16263F" stroke-width="2" fill="#fff">
+              <rect x="20" y="50" width="80" height="140" rx="8"/>
+              <rect x="116" y="50" width="80" height="140" rx="8"/>
+              <rect x="212" y="50" width="80" height="140" rx="8"/>
+            </g>
+            <g stroke="#AFC0D0" stroke-width="2" stroke-dasharray="5 4" fill="#F7FAFD">
+              <rect x="308" y="50" width="80" height="140" rx="8"/>
+              <rect x="404" y="50" width="80" height="140" rx="8"/>
+              <rect x="500" y="50" width="80" height="140" rx="8"/>
+            </g>
+            <g stroke="#16263F" stroke-width="1.5">
+              <line x1="20" y1="74" x2="100" y2="74"/><line x1="116" y1="74" x2="196" y2="74"/>
+              <line x1="212" y1="74" x2="292" y2="74"/>
+            </g>
+            <g font-size="11" font-weight="700" fill="#16263F" text-anchor="middle">
+              <text x="60" y="68">P1</text><text x="156" y="68">P2</text><text x="252" y="68">P3</text>
+            </g>
+            <g font-size="11" fill="#54677E" text-anchor="middle" font-family="'Zen Kaku Gothic New',sans-serif">
+              <text x="348" y="124">空き</text><text x="444" y="124">空き</text><text x="540" y="124">空き</text>
+            </g>
+
+            <g fill="#AEE6A6" stroke="#16263F" stroke-width="1.5">
+              <rect x="28" y="84" width="64" height="16" rx="3"/>
+              <rect x="28" y="106" width="64" height="16" rx="3"/>
+              <rect x="28" y="128" width="64" height="16" rx="3"/>
+              <rect x="28" y="150" width="64" height="16" rx="3"/>
+              <rect x="124" y="84" width="64" height="16" rx="3"/>
+              <rect x="124" y="106" width="64" height="16" rx="3"/>
+              <rect x="124" y="128" width="64" height="16" rx="3"/>
+              <rect x="124" y="150" width="64" height="16" rx="3"/>
+              <rect x="220" y="84" width="64" height="16" rx="3"/>
+              <rect x="220" y="106" width="64" height="16" rx="3"/>
+              <rect x="220" y="128" width="64" height="16" rx="3"/>
+              <rect x="220" y="150" width="64" height="16" rx="3"/>
+            </g>
+
+            <text x="348" y="224" text-anchor="middle" font-size="12" fill="#1E8A4C" font-family="'Zen Kaku Gothic New',sans-serif">空いたページは、あとから使い回せる状態にもどる</text>
+            <text x="300" y="246" text-anchor="middle" font-size="13" fill="#16263F" font-family="'Zen Kaku Gothic New',sans-serif">同じ12行が、3ページに収まる</text>
+          </g>
+
+        </g>
+      </svg>
+      <figcaption>REORGは、生きている行を前から詰め直し、はみ出した行を本来のページに戻します。RUNSTATSは、この絵を1ミリも変えません。ただ「いま何行あって、何ページ使っているか」を数え直して記録するだけです。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="estimate">
+  <h2>見積もりは、どれだけズレるのか</h2>
+  <p class="lead">前回RUNSTATSからの育ち方を選んでみよう。</p>
+  <div class="calcbox">
+    <div class="calcrow">
+      <div>
+        <label for="rows">前回RUNSTATS時の行数</label>
+        <select id="rows"></select>
+      </div>
+      <div>
+        <label for="grow">そのあとの増え方</label>
+        <select id="grow"></select>
+      </div>
+    </div>
+    <div class="result" id="calc-result"></div>
+  </div>
+</section>
+
+<section id="runstats">
+  <h2>RUNSTATSは、1回で何をしているか</h2>
+  <p class="lead">やっているのは「数えて、書く」だけです。<span class="pen">タップして開いてみよう。</span></p>
+
+  <div class="tree">
+    <h3>RUNSTATS の5ステップ</h3>
+    <div class="step-list" id="tree-run"></div>
+  </div>
+  <a class="more" href="#d2"><span class="tag">詳しく</span>オプションの選び方と、統計プロファイル</a>
+</section>
+
+<section id="how">
+  <h2>REORGには、2つのやり方がある</h2>
+  <p class="lead">止めて一気にやるか、動かしながら少しずつやるか。</p>
+
+  <div class="notes">
+    <div class="note">
+      <h3>まとめてやる（classic／オフライン）</h3>
+      <p>生きている行だけを別の場所へ順にコピーし、すきまなく詰め直して、最後に元の表と置きかえます。索引は、そのあとに作り直されます。短い時間できれいに片づくのが持ち味です。</p>
+      <p class="eg">そのかわり、実行中の更新は待たされます（<code>ALLOW READ ACCESS</code> を指定すれば読み取りは通せます）。作業用に表と同じくらいの空きが要り、<code>USE</code> で一時表スペースを指定できます。</p>
+    </div>
+
+    <div class="note">
+      <h3>動かしながらやる（INPLACE／オンライン）</h3>
+      <p>表の中で行を少しずつ動かして、すきまを埋めていきます。読み書きを止めません。途中で <code>PAUSE</code> して、あとで <code>RESUME</code> することもできます。</p>
+      <p class="eg">そのかわり時間がかかり、ログを多く使います。索引は作り直されないので、終わったあとに <code>REORG INDEXES</code> を別に流すのがふつうです。</p>
+    </div>
+
+    <div class="note">
+      <h3>索引だけ、片づける</h3>
+      <p>削除が多い表では、詰まっているのは索引のほうです。索引のページには、消された行の跡（擬似削除）がたまっていきます。</p>
+      <p class="eg"><code>REORG INDEXES ALL FOR TABLE …</code> で作り直す、<code>CLEANUP</code> を指定して跡地の掃除だけに留める、といった選び方ができます。表は動かさないので軽く済みます。</p>
+    </div>
+  </div>
+
+  <div class="tree" style="margin-top:22px">
+    <h3>まとめてやるとき、中で動く4つの段階</h3>
+    <div class="step-list" id="tree-phase"></div>
+  </div>
+  <a class="more" href="#d3"><span class="tag">詳しく</span>書き方と、進み具合の見方</a>
+</section>
+
+<section id="check">
+  <h2>やるかどうかは、測ってから決める</h2>
+  <p class="lead">勘でやらない。Db2には、判定するためのコマンドがあります。</p>
+
+  <p><strong>REORGCHK</strong> は、統計から計算した8つの式で「基準から外れているか」を出します。表について3つ（F1〜F3）、索引について5つ（F4〜F8）。出力の <code>REORG</code> 欄は式の数だけ文字が並び、<code>-</code> なら範囲内、<code>*</code> なら外れている印です。</p>
+
+  <pre class="codeblock"><span class="cm">-- いまある統計だけで判定する（表は読まないので軽い）</span>
+db2 <span class="st">"REORGCHK CURRENT STATISTICS ON TABLE SALES.ORDERS"</span>
+
+Table statistics:
+  TABLE            CARD     OV     NP     FP    F1    F2    F3  <span class="ky">REORG</span>
+  SALES.ORDERS  1200000   8400   9800  14200   0.7    68    69  <span class="hl">-**</span></pre>
+
+  <p>この表は <span class="pen">F1は合格、F2とF3が外れている</span>状態です。はみ出した行は0.7%しかないのに、ページの中身が68%しか詰まっておらず（F2は70%以上がめやす）、確保した14,200ページのうち9,800ページ、つまり69%しか使っていない（F3は80%以上がめやす）。大量に削除したあとの、典型的な姿です。</p>
+
+  <ol class="steps">
+    <li><b>F1 は「はみ出した行の割合」。</b>更新で行が長くなり、別ページへ移った行がどれだけあるか。多いなら、読むページ数が余計に増えています。</li>
+    <li><b>F2 は「ページの詰まり具合」。</b>データページの中が、どれだけ実際に使われているか。削除の跡が残っていると下がります。</li>
+    <li><b>F3 は「確保した場所の使用率」。</b>表のために確保したページのうち、実際に使っているページの割合。空きページを抱えたままだと下がります。</li>
+    <li><b><code>*</code> が付いた＝必ずREORG、ではありません。</b>式はあくまで目安です。かかる時間・ログ・止まる時間と釣り合うかを見て、最後は人が決めます。</li>
+  </ol>
+  <a class="more" href="#d4"><span class="tag">詳しく</span>8つの式の意味と、索引側のF4〜F8</a>
+</section>
+
+<section id="auto">
+  <h2>じつは、自動でもやってくれる</h2>
+  <p class="lead">手で流す前に、まず自動保守の設定を見にいきましょう。</p>
+
+  <div class="notes">
+    <div class="note">
+      <h3>親のスイッチから、順に入れる</h3>
+      <p><code>AUTO_MAINT</code> がすべての親です。その下に <code>AUTO_TBL_MAINT</code>（表の保守）があり、さらにその下に <code>AUTO_RUNSTATS</code> と <code>AUTO_REORG</code> が並びます。</p>
+      <p class="eg">上のスイッチがOFFなら、下をONにしても動きません。「自動にしているはずなのに動いていない」の原因は、たいていここです。</p>
+    </div>
+
+    <div class="note">
+      <h3>統計は、走りながらでも直せる</h3>
+      <p><code>AUTO_STMT_STATS</code>（リアルタイム統計）を入れると、SQLをコンパイルする時点で「この表の統計は古すぎる」と判断されたときに、その場で小さく統計を集めます。</p>
+      <p class="eg">効かせるには <code>AUTO_MAINT</code>／<code>AUTO_TBL_MAINT</code>／<code>AUTO_RUNSTATS</code>／<code>AUTO_STMT_STATS</code> の4つが、すべてONである必要があります。</p>
+    </div>
+
+    <div class="note">
+      <h3>動いてよい時間帯を、決めておく</h3>
+      <p>自動RUNSTATSは<strong>オンライン保守ウィンドウ</strong>の中で動き、自動REORGは<strong>オフライン保守ウィンドウ</strong>の中だけで動きます。</p>
+      <p class="eg">「この時間帯なら止めてよい」を先に決めておかないと、自動REORGは順番が回ってきても実行されないまま、いつまでも待ち続けます。</p>
+    </div>
+  </div>
+  <a class="more" href="#d5"><span class="tag">詳しく</span>設定の入れ方と、任せ方のさじ加減</a>
+</section>
+
+<section id="order">
+  <h2>順番を、まちがえない</h2>
+  <p class="lead">この3つは、必ずこの順です。</p>
+  <ol class="steps">
+    <li><b>まず REORG（並べ直す）。</b>行の物理的な位置も、索引の形も変わります。つまり、いま持っている統計は「並べ直す前の姿」の記録になり、実態と合わなくなります。</li>
+    <li><b>つぎに RUNSTATS（数え直す）。</b>並べ直したあとの姿を数えます。逆順でやると、せっかく取った統計をREORGで古くしてしまうことになります。</li>
+    <li><b>最後に REBIND（計画を作り直す）。</b>静的SQLのパッケージは、作られた時点の計画を持ち続けます。新しい統計で選び直させるには REBIND が必要です。動的SQLはキャッシュされた計画が無効になるので、次の実行で自動的に選び直されます。</li>
+  </ol>
+</section>
+
+<section id="quiz">
+  <h2>クイズ：きみは何問わかる？</h2>
+  <p class="lead">全5問。まちがえても大丈夫、答えのほうが面白い。</p>
+  <div class="quiz" id="quiz"></div>
+</section>
+
+<section id="careful">
+  <h2>気をつけないと、痛い目にあう</h2>
+  <p class="lead">相手は、動いている本番のデータです。</p>
+  <ol class="steps">
+    <li><b>大きな表のオフラインREORGは、終わる時間が読めない。</b>何億行もある表を止めて並べ直すと、終わるまで更新は通りません。同じくらいの大きさの環境で、先に時間を測ってから計画します。</li>
+    <li><b>場所とログを、先に見積もる。</b>classic REORG は表と索引のコピーぶんの空きが要ります（既定では同じ表スペース、<code>USE</code> で一時表スペースを指定可）。INPLACE は動かした行のぶんログを書き続けるので、ログがあふれるとそこで止まります。</li>
+    <li><b>統計をとるだけなら、止めなくていい。</b>RUNSTATS は既定で読み書きを止めません（<code>ALLOW WRITE ACCESS</code>）。「重いから夜間に」と決めつける前に、<code>UTIL_IMPACT_PRIORITY</code> で優先度を下げて流す手もあります。</li>
+    <li><b>全部の表に、毎晩フルでかけない。</b>数千の表へ無条件にRUNSTATSを回すと、それ自体が負荷になります。更新の多い表、大きく増減した表にしぼります。</li>
+    <li><b>統計を「よく見せよう」として、手で書きかえない。</b><code>SYSSTAT</code> のビュー経由で統計を更新することはできますが、実態と違う数字を入れると、その表を使う全部のSQLが引きずられます。検証用と割り切る場所です。</li>
+    <li><b>索引だけで足りることも多い。</b>表全体を止めて並べ直す前に、<code>REORG INDEXES</code> で足りないかを確かめます。削除が多い表では、詰まっているのは索引のほうです。</li>
+  </ol>
+</section>
+
+<section id="words">
+  <h2>ことばのミニ辞典</h2>
+  <p class="lead">この先どこかで見かけたときのために。</p>
+  <dl class="words">
+    <dt>統計情報</dt>
+    <dd>表・列・索引の状態を数えた記録。行数、ページ数、値の異なり数など。カタログ表に置かれ、オプティマイザだけが読む。</dd>
+    <dt>オプティマイザ</dt>
+    <dd>SQLをどの経路で実行するかを決める係。同じSQLでも、統計が変われば選ぶ経路は変わる。</dd>
+    <dt>アクセスプラン</dt>
+    <dd>オプティマイザが選んだ実行の段取り。表を全部読むか、索引をたどるか、どの表から結合するか。</dd>
+    <dt>カーディナリティ</dt>
+    <dd>件数のこと。表の行数は <code>CARD</code>、列に入っている値の異なり数は <code>COLCARD</code> として記録される。</dd>
+    <dt>分布統計</dt>
+    <dd>列の値の偏りの記録。<code>WITH DISTRIBUTION</code> を付けると集める。「特定の値だけ極端に多い」列で効く。</dd>
+    <dt>クラスター率（CLUSTERRATIO）</dt>
+    <dd>索引の並び順と、実データの並び順がどれだけ一致しているか。低いと、索引をたどるたびに飛び飛びのページを読むことになる。</dd>
+    <dt>オーバーフロー行</dt>
+    <dd>更新で長くなり、元のページに入りきらず別ページへ移った行。元の場所には印だけが残るので、読むページが増える。</dd>
+    <dt>擬似削除（pseudo-deleted）</dt>
+    <dd>索引の中で「消した」と印を付けただけの状態。領域はまだ残っていて、掃除しないとたまり続ける。</dd>
+    <dt>REORGCHK</dt>
+    <dd>統計から8つの式を計算し、REORGすべきかを判定するコマンド。出力の <code>*</code> は、その式が推奨範囲から外れている印。</dd>
+    <dt>統計プロファイル</dt>
+    <dd>「この表はこの取り方で」をDb2に登録しておく仕組み。<code>SET PROFILE</code> で登録し、次回からは <code>USE PROFILE</code> だけで同じ取り方を再現できる。</dd>
+    <dt>REBIND</dt>
+    <dd>静的SQLのパッケージに、いまの統計で計画を選び直させる操作。動的SQLは、キャッシュが無効化されるので自動で選び直される。</dd>
+    <dt>保守ウィンドウ</dt>
+    <dd>自動保守が動いてよい時間帯。オンライン用とオフライン用があり、自動REORGは後者の中だけで動く。</dd>
+  </dl>
+</section>
+
+<section class="deep-head" id="deep">
+  <span class="deep-badge">ここから先は、もう一段くわしい話</span>
+  <h2>詳細解説：新人エンジニア向け</h2>
+  <p class="lead">ここまでの内容がわかっていれば、読まなくても困りません。実際に運用する側になったとき、つまずきやすいところをまとめています。コマンドは Db2 for LUW のものです。</p>
+
+  <div class="deep" id="d1">
+    <h3>1. 統計は、どこに書かれているのか</h3>
+    <p class="sup">やさしい説明の「なんで、こんな作業が要るの？」の部分</p>
+
+    <p>RUNSTATSが書き込む先は、Db2が自分で持っているカタログ表です。人が読める形で置かれているので、SQLでそのまま確認できます。おもな置き場所は4つです。</p>
+    <div class="tablescroll">
+    <table class="wrapth">
+      <tr><th><code>SYSCAT.TABLES</code></th><td>表そのものの数字。<code>CARD</code>（行数）、<code>NPAGES</code>（使用ページ）、<code>FPAGES</code>（確保ページ）、<code>OVERFLOW</code>（はみ出した行）、<code>STATS_TIME</code>（いつ取ったか）</td></tr>
+      <tr><th><code>SYSCAT.COLUMNS</code></th><td>列ごとの数字。<code>COLCARD</code>（異なり数）、<code>HIGH2KEY</code>／<code>LOW2KEY</code>、<code>NUMNULLS</code>、<code>AVGCOLLEN</code></td></tr>
+      <tr><th><code>SYSCAT.INDEXES</code></th><td>索引の数字。<code>CLUSTERRATIO</code>、<code>NLEAF</code>（葉ページ数）、<code>NLEVELS</code>（段数）、<code>FIRSTKEYCARD</code>、<code>FULLKEYCARD</code></td></tr>
+      <tr><th><code>SYSCAT.COLDIST</code></th><td>分布統計。よく出る値（頻出値）と、値をならべて区切った位置（分位）が入る</td></tr>
+    </table>
+    </div>
+
+    <h4>まず見るのは、いつ取ったか</h4>
+<pre><code>SELECT TABNAME, CARD, NPAGES, FPAGES, OVERFLOW, STATS_TIME
+  FROM SYSCAT.TABLES
+ WHERE TABSCHEMA = <span class="hl">'SALES'</span> AND TYPE = 'T'
+ ORDER BY CARD DESC;</code></pre>
+    <p><code>STATS_TIME</code> が <code>NULL</code> なら、その表は一度も統計を取っていません（あるいはリセットされています）。「遅い」と言われたとき、最初に見るのはここです。日付が半年前なら、それだけで疑う理由になります。</p>
+
+    <h4>HIGH2KEY が「2番目」なのはなぜか</h4>
+    <p>列の最大値・最小値ではなく、<strong>2番目に大きい値・2番目に小さい値</strong>を記録しています。いちばん端の値は、テストで入れた <code>9999-12-31</code> のような外れ値であることが多く、それを範囲の端として信じると、範囲検索の見積もりが大きく狂うからです。</p>
+
+    <h4>手で書きかえることも、できてしまう</h4>
+    <p><code>SYSSTAT.TABLES</code>・<code>SYSSTAT.COLUMNS</code> などのビューは更新可能で、統計の値を直接書きかえられます。「本番と同じ規模の統計を、小さな検証環境に持ち込んで実行計画だけ再現する」といった使い方をします。</p>
+    <p class="caution">本番で実態と違う値を入れると、その表を使うすべてのSQLの計画が引きずられます。しかも原因が見えにくい。使うなら、検証環境だけにしてください。</p>
+    <a class="back" href="#basic">← やさしい説明にもどる</a>
+  </div>
+
+  <div class="deep" id="d2">
+    <h3>2. RUNSTATSの書き方</h3>
+    <p class="sup">やさしい説明の「RUNSTATSは、1回で何をしているか」の部分</p>
+
+    <p>迷ったときの基本形はこれです。表の統計・列の分布・索引の詳細を、まとめて取ります。</p>
+<pre><code>RUNSTATS ON TABLE SALES.ORDERS
+   <span class="hl">WITH DISTRIBUTION AND DETAILED INDEXES ALL</span>;</code></pre>
+
+    <h4>おもなオプション</h4>
+    <div class="tablescroll">
+    <table class="wrapth">
+      <tr><th><code>WITH DISTRIBUTION</code></th><td>値の偏りまで記録する。「都道府県のうち東京だけで6割」のような列があるとき、これがないと値が均等に散っていると仮定される</td></tr>
+      <tr><th><code>AND INDEXES ALL</code></th><td>表の統計に加えて、すべての索引の統計も同時に取る</td></tr>
+      <tr><th><code>AND DETAILED INDEXES ALL</code></th><td>索引について、ページの読み方まで細かく見積もる。大きな索引ほど効く</td></tr>
+      <tr><th><code>AND SAMPLED DETAILED INDEXES ALL</code></th><td>上をサンプリングで軽くしたもの。索引が巨大なときの逃げ道</td></tr>
+      <tr><th><code>ON KEY COLUMNS</code></th><td>索引の先頭列など、キーになる列にしぼって列統計を取る。列が非常に多い表で効く</td></tr>
+      <tr><th><code>TABLESAMPLE SYSTEM(10)</code></th><td>表の10%だけ読んで推定する（ページ単位の抽出）。<code>BERNOULLI</code> は行単位</td></tr>
+      <tr><th><code>ALLOW WRITE ACCESS</code></th><td>実行中も他から読み書きできる。<strong>これが既定</strong>。<code>ALLOW READ ACCESS</code> にすると更新が待たされる</td></tr>
+      <tr><th><code>UTIL_IMPACT_PRIORITY n</code></th><td>ほかの処理への影響を抑えて流す。数字が小さいほど遠慮する（省略時は制限なし）</td></tr>
+      <tr><th><code>SET PROFILE</code> / <code>USE PROFILE</code></th><td>取り方を登録しておき、次回からはそれを再現する</td></tr>
+    </table>
+    </div>
+
+    <h4>統計プロファイル</h4>
+    <p>表ごとに「この表はこの取り方で」を登録しておけます。長いオプションを毎回書かなくてよくなり、自動RUNSTATSもこのプロファイルに従うようになります。</p>
+<pre><code><span class="cm">-- 取り方を登録して、そのまま実行する</span>
+RUNSTATS ON TABLE SALES.ORDERS
+   WITH DISTRIBUTION AND DETAILED INDEXES ALL <span class="hl">SET PROFILE</span>;
+
+<span class="cm">-- 登録だけして、実行はしない</span>
+RUNSTATS ON TABLE SALES.ORDERS ... <span class="hl">SET PROFILE ONLY</span>;
+
+<span class="cm">-- 次回からは、これだけでよい</span>
+RUNSTATS ON TABLE SALES.ORDERS <span class="hl">USE PROFILE</span>;</code></pre>
+
+    <h4>どこまで取るか、の目安</h4>
+    <ul>
+      <li>検索条件・結合条件・<code>ORDER BY</code> に出てくる列は、統計があるほど効きます</li>
+      <li>値が偏っている列には <code>WITH DISTRIBUTION</code> を付けます</li>
+      <li>表がそれほど大きくないなら、迷わず <code>WITH DISTRIBUTION AND DETAILED INDEXES ALL</code> で構いません</li>
+      <li>巨大な表は <code>TABLESAMPLE</code> と <code>SAMPLED</code> で時間を抑えます。精度は少し落ちますが、古い統計よりはるかにましです</li>
+    </ul>
+    <p class="caution">RUNSTATSを流したあと、静的SQL（プログラムに埋め込んで作ったパッケージ）は <code>REBIND</code> するまで古い計画のままです。「統計を取り直したのに速くならない」の原因の定番がこれです。</p>
+    <a class="back" href="#basic">← やさしい説明にもどる</a>
+  </div>
+
+  <div class="deep" id="d3">
+    <h3>3. REORGの書き方と、選び方</h3>
+    <p class="sup">やさしい説明の「REORGには、2つのやり方がある」の部分</p>
+
+    <div class="tablescroll">
+    <table class="wrapth">
+      <tr><th></th><th>まとめて（classic）</th><th>動かしながら（INPLACE）</th></tr>
+      <tr><th>書き方</th><td><code>REORG TABLE T</code></td><td><code>REORG TABLE T INPLACE</code></td></tr>
+      <tr><th>更新</th><td>止まる（<code>ALLOW READ ACCESS</code> で読み取りは可）</td><td>止まらない</td></tr>
+      <tr><th>索引</th><td>最後にまとめて作り直される</td><td>作り直されない（別途 <code>REORG INDEXES</code>）</td></tr>
+      <tr><th>時間</th><td>短い</td><td>長い</td></tr>
+      <tr><th>場所</th><td>表と同じくらいの作業領域が要る</td><td>表の中で動かす</td></tr>
+      <tr><th>ログ</th><td>比較的少ない</td><td>多い</td></tr>
+      <tr><th>中断</th><td>できない（やり直し）</td><td><code>PAUSE</code>／<code>RESUME</code> できる</td></tr>
+    </table>
+    </div>
+
+<pre><code><span class="cm">-- まとめて。索引の順に並べ直し、作業は一時表スペースで</span>
+REORG TABLE SALES.ORDERS <span class="hl">INDEX</span> SALES.IX_ORD_DATE
+   <span class="hl">USE</span> TEMPSPACE1 ALLOW READ ACCESS;
+
+<span class="cm">-- 動かしながら。索引はあとで別に片づける</span>
+REORG TABLE SALES.ORDERS <span class="hl">INPLACE</span> ALLOW WRITE ACCESS START;
+REORG INDEXES ALL FOR TABLE SALES.ORDERS ALLOW WRITE ACCESS;</code></pre>
+
+    <h4>INDEX 句を付けるかどうか</h4>
+    <p><code>INDEX</code> を指定すると、その索引のキー順に行を並べ直します。範囲検索でよく使う索引を指定すると、クラスター率（<code>CLUSTERRATIO</code>）が上がり、続けて読むページが連続します。指定しなければ、いまの並びのまま、すきまだけを詰めます。</p>
+
+    <h4>軽い選択肢もある</h4>
+    <ul>
+      <li><code>RECLAIM EXTENTS</code>：空になったエクステントを表スペースに返すだけ。行は動かさないので軽い</li>
+      <li><code>CLEANUP ONLY</code>／<code>CLEANUP ONLY PAGES</code>（索引）：作り直さず、跡地の掃除だけをする</li>
+      <li><code>REORG INDEXES ALL FOR TABLE …</code>：表はそのまま、索引だけを作り直す。オンラインでやりたいときは <code>ALLOW READ ACCESS</code> か <code>ALLOW WRITE ACCESS</code> を明示する</li>
+    </ul>
+
+    <h4>進み具合の見方</h4>
+<pre><code>db2pd -db SAMPLE -reorgs
+db2 "LIST HISTORY REORG ALL FOR DB SAMPLE"</code></pre>
+    <p>classic REORG の内部の段階（並べ替え → 作り直し → 置きかえ → 索引の再作成）は、この出力に現れます。長時間かかっているときに「いまどの段階か」を見れば、あとどれくらいかの見当がつきます。</p>
+    <p class="caution">INPLACE のあとに索引を放っておくと、「表はきれいなのに、索引を使う検索だけ遅い」という状態が残ります。セットで流してください。</p>
+    <a class="back" href="#basic">← やさしい説明にもどる</a>
+  </div>
+
+  <div class="deep" id="d4">
+    <h3>4. REORGCHK の8つの式</h3>
+    <p class="sup">やさしい説明の「やるかどうかは、測ってから決める」の部分</p>
+
+    <h4>表について（F1〜F3）</h4>
+    <div class="tablescroll">
+    <table class="wrapth">
+      <tr><th>F1</th><td><code>100 × OVERFLOW ÷ CARD &lt; 5</code><br>はみ出した行が5%未満か</td></tr>
+      <tr><th>F2</th><td><code>100 × (データページの実質使用量) &gt; 70</code><br>ページの中身が7割以上詰まっているか</td></tr>
+      <tr><th>F3</th><td><code>100 × (使用ページ ÷ 確保ページ) &gt; 80</code><br>確保した場所の8割以上を、実際に使っているか</td></tr>
+    </table>
+    </div>
+
+    <h4>索引について（F4〜F8）</h4>
+    <div class="tablescroll">
+    <table class="wrapth">
+      <tr><th>F4</th><td><code>CLUSTERRATIO（または正規化した CLUSTERFACTOR） &gt; 80</code><br>索引の順と実データの順が、8割以上そろっているか</td></tr>
+      <tr><th>F5</th><td><code>100 × (葉ページで使われている領域 ÷ 空でない葉ページの利用可能領域) &gt; MIN(50, 100 − PCTFREE)</code><br>葉ページがすかすかになっていないか</td></tr>
+      <tr><th>F6</th><td><code>(100 − PCTFREE) × (段を1つ減らした索引に入る領域 ÷ 全キーに必要な領域) &lt; 100</code><br>段数が、必要より1つ多くなっていないか</td></tr>
+      <tr><th>F7</th><td><code>100 × (擬似削除されたRID数 ÷ 全RID数) &lt; 20</code><br>消した跡が、たまりすぎていないか</td></tr>
+      <tr><th>F8</th><td><code>100 × (擬似的に空の葉ページ数 ÷ 全葉ページ数) &lt; 20</code><br>中身のない葉ページが、残りすぎていないか</td></tr>
+    </table>
+    </div>
+
+    <h4>どこが外れたら、何をするか</h4>
+    <ul>
+      <li><b>F1・F2・F3</b> が外れている → 表のREORG。すきまとはみ出しを詰め直す</li>
+      <li><b>F4</b> が外れている → <code>INDEX</code> 句を付けたREORG。並び順をそろえ直す</li>
+      <li><b>F5・F6</b> が外れている → 索引の作り直し（<code>REORG INDEXES ALL</code>）</li>
+      <li><b>F7・F8</b> が外れている → 跡地の掃除（<code>CLEANUP</code>）で足りることが多い</li>
+    </ul>
+
+    <h4>2つのモードと、表で受け取る方法</h4>
+<pre><code><span class="cm">-- いまある統計だけで判定する（軽い）</span>
+REORGCHK <span class="hl">CURRENT STATISTICS</span> ON TABLE SALES.ORDERS;
+
+<span class="cm">-- 統計を取り直してから判定する（重い）</span>
+REORGCHK <span class="hl">UPDATE STATISTICS</span> ON SCHEMA SALES;
+
+<span class="cm">-- 結果を表として受け取り、自分のしきい値で判定する</span>
+CALL SYSPROC.REORGCHK_TB_STATS('T', 'SALES.ORDERS');
+CALL SYSPROC.REORGCHK_IX_STATS('T', 'SALES.ORDERS');</code></pre>
+    <p class="caution"><code>UPDATE STATISTICS</code> 版は、内部でRUNSTATS相当を流します。スキーマ全体に対して日中に軽い気持ちでかけると、それ自体が重い処理になります。</p>
+    <a class="back" href="#basic">← やさしい説明にもどる</a>
+  </div>
+
+  <div class="deep" id="d5">
+    <h3>5. 自動保守に、どこまで任せるか</h3>
+    <p class="sup">やさしい説明の「じつは、自動でもやってくれる」の部分</p>
+
+    <h4>スイッチは、親子になっている</h4>
+<pre><code>AUTO_MAINT                  <span class="cm">← すべての親</span>
+ ├ AUTO_DB_BACKUP           <span class="cm">自動バックアップ</span>
+ └ AUTO_TBL_MAINT           <span class="cm">表の保守の親</span>
+    ├ AUTO_RUNSTATS         <span class="cm">自動で統計を取る</span>
+    │   ├ AUTO_STMT_STATS   <span class="cm">SQLのコンパイル時に、その場で取る</span>
+    │   └ AUTO_SAMPLING     <span class="cm">大きな表はサンプリングで取る</span>
+    └ AUTO_REORG            <span class="cm">自動で再編成する</span></code></pre>
+
+<pre><code>db2 UPDATE DB CFG FOR SAMPLE USING AUTO_MAINT ON
+db2 UPDATE DB CFG FOR SAMPLE USING AUTO_TBL_MAINT ON
+db2 UPDATE DB CFG FOR SAMPLE USING AUTO_RUNSTATS ON
+db2 UPDATE DB CFG FOR SAMPLE USING AUTO_STMT_STATS ON
+db2 UPDATE DB CFG FOR SAMPLE USING AUTO_REORG ON
+
+<span class="cm">-- いまの状態を確かめる</span>
+db2 GET DB CFG FOR SAMPLE | grep -i auto</code></pre>
+
+    <h4>動く時間帯</h4>
+    <p>自動RUNSTATSは<strong>オンライン保守ウィンドウ</strong>、自動REORGは<strong>オフライン保守ウィンドウ</strong>の中でだけ動きます。ウィンドウは自動保守ポリシーで決めます（<code>SYSPROC.AUTOMAINT_SET_POLICY</code> などで設定）。オフラインのウィンドウを1分も用意していなければ、自動REORGは永遠に動きません。</p>
+
+    <h4>任せ方のさじ加減</h4>
+    <ul>
+      <li>自動RUNSTATSは「大きく変わった表」を自分で選んで流します。全表を毎晩なめるわけではありません</li>
+      <li>特定の表だけ取り方を変えたいときは、統計プロファイルを登録しておきます。自動RUNSTATSもそれに従います</li>
+      <li>自動が何を評価して、何を見送ったかは <code>db2diag.log</code> に残ります。「動いていない気がする」ときは、まずここを読みます</li>
+      <li>止まってはいけない表のREORGは、自動に任せず、止められる時間帯に手で流す判断もありです</li>
+    </ul>
+    <a class="back" href="#basic">← やさしい説明にもどる</a>
+  </div>
+
+  <div class="deep" id="d6">
+    <h3>6. いつ、どこまでやるか</h3>
+    <p class="sup">運用の組み立て方</p>
+
+    <h4>流すべきタイミング</h4>
+    <ul>
+      <li>大量ロード・大量削除の直後。件数が桁で変わったときは、統計も必ず取り直す</li>
+      <li>索引を新しく作ったあと</li>
+      <li>列の追加など、表の定義を変えたあと</li>
+      <li>定期的に（週次・月次）。ただし全表ではなく、変化した表だけを選ぶ</li>
+    </ul>
+
+    <h4>判断の材料</h4>
+    <div class="tablescroll">
+    <table class="wrapth">
+      <tr><th><code>SYSCAT.TABLES.STATS_TIME</code></th><td>いつ統計を取ったか。古い順に並べれば、放置されている表が見つかる</td></tr>
+      <tr><th><code>REORGCHK</code> の <code>REORG</code> 欄</th><td>どの式が外れているか。表を直すのか索引を直すのかが分かれる</td></tr>
+      <tr><th><code>SYSIBMADM.ADMINTABINFO</code></th><td>実際に使っている領域と、再利用できる領域。REORGでどれだけ減るかの見当がつく</td></tr>
+      <tr><th><code>EXPLAIN</code>／<code>db2exfmt</code></th><td>計画上の見積もり行数と、実際の行数の差。ここが桁で違えば、統計を疑う</td></tr>
+    </table>
+    </div>
+
+    <h4>やらないほうがよいこと</h4>
+    <ul>
+      <li>数百行しかない小さな表に、毎晩REORGをかける（効果より手間のほうが大きい）</li>
+      <li>増える一方で削除のない表に、頻繁なREORG（すきまができないので、詰め直すものがない）</li>
+      <li>ピーク時間帯の <code>REORGCHK UPDATE STATISTICS</code></li>
+      <li>本番でいきなり初めて試すこと。実行時間・ログ量・必要な空き容量を、同じ規模の環境で先に測る</li>
+    </ul>
+    <p class="caution">RUNSTATSとREORGは、速くするための魔法ではありません。「オプティマイザに正しい材料を渡し、無駄なページを読ませない」という当たり前の状態に戻す作業です。それでも遅いなら、次に疑うのはSQLと索引設計のほうです。</p>
+    <a class="back" href="#basic">← やさしい説明にもどる</a>
+  </div>
+</section>
+
+<section class="sibling">
+  <h2>ほかの解説ページ</h2>
+  <ul>
+    <li><a href="mcp.html"><b>MCPのしくみ</b><span>AIは、外の道具を借りて動いている。</span></a></li>
+    <li><a href="cicd.html"><b>CI/CDのしくみ</b><span>直したものを、こわがらずに届けるために。</span></a></li>
+    <li><a href="websocket.html"><b>WebSocketのしくみ</b><span>「まだ？」と聞きに行かなくてよくなった日。</span></a></li>
+    <li><a href="flyway.html"><b>Flywayのしくみ</b><span>データベースだけ、やり直しがきかない。</span></a></li>
+    <li><a href="getdown.html"><b>Getdownのしくみ</b><span>配ったあとに、直せるようにする。</span></a></li>
+    <li><a href="angular.html"><b>Angularのしくみ</b><span>画面を、部品に切り分ける。</span></a></li>
+    <li><a href="bigip.html"><b>BIG-IPのしくみ</b><span>入口を1つにして、裏を何台にでも。</span></a></li>
+    <li><a href="spring.html"><b>Springのしくみ</b><span>部品の組み立てを、任せてしまう。</span></a></li>
+    <li><a href="docker.html"><b>Dockerのしくみ</b><span>「私のPCでは動く」を、なくすために。</span></a></li>
+    <li><a href="kubernetes.html"><b>Kubernetesのしくみ</b><span>落ちたら、勝手に起き上がる。</span></a></li>
+    <li><a href="aws.html"><b>AWSのしくみ</b><span>サーバーを、買わずに借りる。</span></a></li>
+    <li><a href="nosql.html"><b>NoSQLのしくみ</b><span>表の形に、こだわらない。</span></a></li>
+    <li><a href="graphql.html"><b>GraphQLのしくみ</b><span>ほしい形を、こちらから書く。</span></a></li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <p>Db2 の RUNSTATS と REORG を、たとえ話・図解・クイズでたどるやさしい解説ページです。オプションの細部やバージョンごとの違いは、公式ドキュメントをどうぞ。</p>
+  <p class="footmeta">最終更新日: 2026.9.7 ｜ 参考文献: <a href="https://www.ibm.com/docs/ja/db2/12.1.x?topic=commands-runstats" target="_blank" rel="noopener">RUNSTATS コマンド（IBM Documentation）</a> ／ <a href="https://www.ibm.com/docs/en/db2/11.5.x?topic=commands-reorg-table" target="_blank" rel="noopener">REORG TABLE command</a> ／ <a href="https://www.ibm.com/docs/en/db2/11.5.x?topic=reorganization-choosing-table-method" target="_blank" rel="noopener">Choosing a table reorganization method</a> ／ <a href="https://www.ibm.com/docs/en/db2/12.1.x?topic=commands-reorgchk" target="_blank" rel="noopener">REORGCHK コマンド</a> ／ <a href="https://www.ibm.com/docs/en/db2/11.1.0?topic=parameters-auto-maint-automatic-maintenance-switches" target="_blank" rel="noopener">auto_maint 構成パラメータ</a></p>
+  <p class="footver">Db2の統計と再編成のしくみ　v1.0.0</p>
+</footer>
+
+</div>
+
+<script>
+"use strict";
+var APP_VERSION = "1.0.0";
+
+function fmt(n){
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+/* ============ 散らかった表と、詰め直した表 ============ */
+function initSwitch(){
+  var now = document.getElementById("tb-now");
+  var reo = document.getElementById("tb-reorg");
+  var nBtn = document.getElementById("btn-now");
+  var rBtn = document.getElementById("btn-reorg");
+  var tally = document.getElementById("tally");
+  if(!now || !reo) return;
+
+  function show(isNow){
+    now.classList.toggle("hidden", !isNow);
+    reo.classList.toggle("hidden", isNow);
+    nBtn.setAttribute("aria-pressed", isNow ? "true" : "false");
+    rBtn.setAttribute("aria-pressed", isNow ? "false" : "true");
+    tally.innerHTML = isNow
+      ? '全件読むのに、さわるページ　<b>6</b> ページ'
+      : '全件読むのに、さわるページ　<b>3</b> ページ';
+  }
+  nBtn.addEventListener("click", function(){ show(true); });
+  rBtn.addEventListener("click", function(){ show(false); });
+}
+
+/* ============ 見積もりのズレ ============ */
+function initCalc(){
+  var r = document.getElementById("rows");
+  var g = document.getElementById("grow");
+  var res = document.getElementById("calc-result");
+  if(!r || !g || !res) return;
+
+  [[10000,"1万行"],[100000,"10万行"],[1000000,"100万行"],[10000000,"1000万行"]].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v[0]); o.textContent = v[1];
+    if(v[0] === 1000000) o.selected = true;
+    r.appendChild(o);
+  });
+  [1.5,3,10,50,100].forEach(function(v){
+    var o = document.createElement("option");
+    o.value = String(v); o.textContent = v + "倍になった";
+    if(v === 10) o.selected = true;
+    g.appendChild(o);
+  });
+
+  function update(){
+    var base = parseInt(r.value, 10);
+    var mult = parseFloat(g.value);
+    var actual = Math.round(base * mult);
+
+    var msg = mult <= 1.5
+      ? "このくらいのズレなら、選ばれる経路はたいてい変わりません。統計は、いつも完璧である必要はないということでもあります。"
+      : mult <= 3
+        ? "結合の順番や、索引を使うかどうかの判断が変わりはじめる領域です。ここから、SQLによって当たり外れが出てきます。"
+        : mult <= 10
+          ? "「少ししか返らない」つもりの計画のまま、その10倍を処理することになります。1件ずつ引きに行く方式が選ばれていると、ここから急に重くなります。"
+          : "数十件のつもりで選んだやり方のまま、数百万件を1件ずつ引きに行く——「ある日おそくなった」の、いちばん多い正体です。";
+
+    var html = '<p class="rline">オプティマイザが見ているのは <strong>' + fmt(base) +
+               '行</strong>。いま実際にあるのは <strong>' + fmt(actual) +
+               '行</strong>。見積もりは <strong>' + mult + '倍</strong> ずれています。</p>';
+
+    html += '<div class="bars">';
+    html += '<div><p class="bar-label">統計が示している行数　' + fmt(base) + '</p>' +
+            '<div class="bar good"><span style="width:' + Math.max(100 / mult, 2) + '%"></span></div></div>';
+    html += '<div><p class="bar-label">いま実際にある行数　' + fmt(actual) + '</p>' +
+            '<div class="bar"><span style="width:100%"></span></div></div>';
+    html += '</div>';
+
+    html += '<p class="rline" style="margin:0">' + msg + '</p>';
+    res.innerHTML = html;
+  }
+
+  r.addEventListener("change", update);
+  g.addEventListener("change", update);
+  update();
+}
+
+/* ============ 開閉するリスト ============ */
+function buildSteps(hostId, list, prefix, labelA, labelB){
+  var host = document.getElementById(hostId);
+  if(!host) return;
+  list.forEach(function(s, i){
+    var wrap = document.createElement("div");
+    wrap.className = "step";
+    wrap.setAttribute("aria-expanded","false");
+    var btnId = prefix + "-btn-" + i, panId = prefix + "-pan-" + i;
+
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.id = btnId;
+    btn.setAttribute("aria-controls", panId);
+    btn.setAttribute("aria-expanded","false");
+    btn.innerHTML = '<span class="yr">' + s.y + '</span><span class="nm">' + s.n +
+                    '</span><span class="plus" aria-hidden="true"></span>';
+
+    var pan = document.createElement("div");
+    pan.className = "detail"; pan.id = panId; pan.hidden = true;
+    pan.setAttribute("role","region");
+    pan.setAttribute("aria-labelledby", btnId);
+    pan.innerHTML = '<p class="trouble">' + labelA + s.t + '</p>' +
+                    '<p class="fix">' + labelB + s.f + '</p>';
+
+    btn.addEventListener("click", function(){
+      var open = pan.hidden;
+      pan.hidden = !open;
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      wrap.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    wrap.appendChild(btn); wrap.appendChild(pan); host.appendChild(wrap);
+  });
+}
+
+var RUN = [
+  {y:"①", n:"表を読む（全部か、一部か）",
+   t:"数える材料が、<b>手に入らない</b>。",
+   f:"既定では全行を読んで数える。大きな表では <code>TABLESAMPLE</code> で一部だけ読んで推定することもできる。読んでいるあいだも、ほかの人は読み書きできる（<code>ALLOW WRITE ACCESS</code> が既定）。"},
+  {y:"②", n:"表の大きさを数える",
+   t:"「全部読むと何ページぶんか」が分からず、<b>表スキャンの費用を見積もれない</b>。",
+   f:"行数（CARD）、使用ページ数（NPAGES）、確保ページ数（FPAGES）、はみ出した行の数（OVERFLOW）を数える。"},
+  {y:"③", n:"列の中身の散らばりを見る",
+   t:"「性別＝女」と「会員番号＝12345」が、<b>同じ絞り込み具合だと思われてしまう</b>。",
+   f:"列ごとの異なり数（COLCARD）、2番目に大きい／小さい値（HIGH2KEY／LOW2KEY）、NULLの数を記録する。<code>WITH DISTRIBUTION</code> を付けると、値の偏りまで残す。"},
+  {y:"④", n:"索引の状態を測る",
+   t:"索引をたどったあとの表アクセスが、連続するのか<b>飛び飛びになるのか分からない</b>。",
+   f:"索引の並び順と実データの並び順の一致具合（CLUSTERRATIO）、葉ページ数（NLEAF）、段数（NLEVELS）などを記録する。<code>DETAILED INDEXES ALL</code> でさらに細かく見る。"},
+  {y:"⑤", n:"カタログに書いて、古い計画を捨てさせる",
+   t:"新しい数字があっても、<b>古い計画が使われ続ける</b>。",
+   f:"結果を SYSCAT.TABLES／SYSCAT.COLUMNS／SYSCAT.INDEXES などに書き込む。動的SQLはキャッシュ済みの計画が無効になり、次の実行で選び直される。静的SQLは <code>REBIND</code> するまで古いまま。"}
+];
+
+var PHASE = [
+  {y:"①", n:"並べ替え（SORT）",
+   t:"元の表が、まだそのまま使われている",
+   f:"<code>INDEX</code> 句で指定した索引のキー順に、生きている行を並べ替える。指定していなければ、この段階は省かれ、いまの並びのまま詰めていく。"},
+  {y:"②", n:"作り直し（BUILD）",
+   t:"更新は待たされる（<code>ALLOW READ ACCESS</code> なら、読み取りは通る）",
+   f:"生きている行だけを、すきまなくコピーしていく。削除の跡地と、はみ出した行は、ここで消える。"},
+  {y:"③", n:"置きかえ（REPLACE）",
+   t:"いちばん短い段階だが、ここは完全に止まる",
+   f:"できあがったものを、元の表と入れかえる。"},
+  {y:"④", n:"索引の作り直し（INDEX_RECREATE）",
+   t:"索引はまだ使えない。終わるまで待つ",
+   f:"行の物理的な位置が変わったので、その表のすべての索引を作り直す。索引が多い表では、ここが全体でいちばん長いこともある。"}
+];
+
+var QUIZ = [
+  {
+    q:"RUNSTATSは、何をするコマンド？",
+    c:["表の行を並べ直す","表や索引の中身を数えて、カタログに記録する","索引を新しく作る","古いデータを消す"],
+    a:1,
+    e:"数えて、書くだけです。データそのものは1行も動きません。この記録を材料に、オプティマイザが実行の経路を選びます。"
+  },
+  {
+    q:"大量に削除したあと、読むページ数が減らない。効くのはどっち？",
+    c:["RUNSTATSを流す","REORGで詰め直す","索引を1本足す","何もしなくてよい"],
+    a:1,
+    e:"統計を取り直しても、行の置き方は変わりません。すきまを詰めるのはREORGの仕事です。ただしREORGのあとは姿が変わっているので、続けてRUNSTATSも流します。"
+  },
+  {
+    q:"REORGCHKの <code>REORG</code> 欄に出る「<code>*</code>」の意味は？",
+    c:["エラーが起きた","式の値が推奨範囲から外れている","いま実行中","統計がまだない"],
+    a:1,
+    e:"<code>-</code> なら範囲内、<code>*</code> なら外れ、という印です。表なら3文字（F1〜F3）、索引なら5文字（F4〜F8）並びます。外れていても、実行するかどうかは人が決めます。"
+  },
+  {
+    q:"正しい順番はどれ？",
+    c:["RUNSTATS → REORG → REBIND","REORG → RUNSTATS → REBIND","REBIND → REORG → RUNSTATS","どの順でも同じ"],
+    a:1,
+    e:"並べ直してから数え直し、最後に計画を作り直します。逆順でやると、取ったばかりの統計をREORGで古くしてしまいます。"
+  },
+  {
+    q:"表を止めずに再編成したいときは？",
+    c:["REORG TABLE … INPLACE","REORG TABLE … USE TEMPSPACE1","RUNSTATS … ALLOW WRITE ACCESS","REORGCHK CURRENT STATISTICS"],
+    a:0,
+    e:"INPLACE（オンライン再編成）は、表の中で少しずつ行を動かすので読み書きを止めません。そのかわり時間とログを使い、索引は作り直されないので、あとで REORG INDEXES を流します。"
+  }
+];
+
+var qIndex = 0, qScore = 0;
+
+function renderQuiz(){
+  var host = document.getElementById("quiz");
+  if(!host) return;
+
+  if(qIndex >= QUIZ.length){
+    var msg = qScore === 5 ? "全問正解。もう、当番として夜間バッチを任されても大丈夫。"
+            : qScore >= 3 ? "いい線いってる。まちがえた問題ほど、覚えて帰れる。"
+            : "ここからが面白いところ。上の5ステップを、もう一度ひらいてみよう。";
+    host.innerHTML = '<p class="score">結果：' + qScore + ' / ' + QUIZ.length + ' 問正解</p>' +
+                     '<p style="margin:0 0 14px">' + msg + '</p>' +
+                     '<button class="qnext" type="button" id="again">もう一度やる</button>';
+    document.getElementById("again").addEventListener("click", function(){
+      qIndex = 0; qScore = 0; renderQuiz();
+    });
+    return;
+  }
+
+  var item = QUIZ[qIndex];
+  var html = '<div class="qhead"><span class="qcount">第' + (qIndex+1) + '問 / ' + QUIZ.length + '問</span></div>' +
+             '<p class="qtext">' + item.q + '</p><div class="choices">';
+  item.c.forEach(function(text, i){
+    html += '<button class="choice" type="button" data-i="' + i + '">' + text + '</button>';
+  });
+  html += '</div><div class="answer" id="answer" hidden></div>';
+  host.innerHTML = html;
+
+  var buttons = host.querySelectorAll(".choice");
+  Array.prototype.forEach.call(buttons, function(b){
+    b.addEventListener("click", function(){
+      var picked = parseInt(b.dataset.i, 10);
+      var ok = picked === item.a;
+      if(ok) qScore++;
+
+      Array.prototype.forEach.call(buttons, function(x, i){
+        x.disabled = true;
+        if(i === item.a) x.classList.add("correct");
+        else if(i === picked) x.classList.add("wrong");
+      });
+
+      var ans = document.getElementById("answer");
+      ans.hidden = false;
+      ans.innerHTML = '<span class="verdict ' + (ok ? "ok" : "ng") + '">' +
+                      (ok ? "正解！" : "残念、正解は「" + item.c[item.a].replace(/<[^>]+>/g,"") + "」") + '</span>' +
+                      item.e +
+                      '<div><button class="qnext" type="button" id="next">' +
+                      (qIndex === QUIZ.length - 1 ? "結果を見る" : "次の問題へ") + '</button></div>';
+      document.getElementById("next").addEventListener("click", function(){
+        qIndex++; renderQuiz();
+      });
+      document.getElementById("next").focus();
+    });
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  document.getElementById("version").textContent = "v" + APP_VERSION;
+  initSwitch();
+  initCalc();
+  buildSteps("tree-run", RUN, "run", "😖 これがないと：", "💡 やっていること：");
+  buildSteps("tree-phase", PHASE, "phase", "🔒 このあいだ、表は：", "💡 やっていること：");
+  renderQuiz();
+});
+</script>
+</body>
+</html>

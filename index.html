@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>やさしい技術解説 — 用語集</title>
-<meta name="description" content="MCP・CI/CD・WebSocket・NoSQL・GraphQL などを、たとえ話と図解とクイズでたどる解説シリーズ。更新情報と、各ページの用語をまとめた索引つき。">
+<meta name="description" content="MCP・CI/CD・WebSocket・NoSQL・GraphQL・Db2 などを、たとえ話と図解とクイズでたどる解説シリーズ。更新情報と、各ページの用語をまとめた索引つき。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -15,7 +15,7 @@
 
 <header class="topbar">
   <span class="logo">やさしい技術解説</span>
-  <span class="ver" id="version">v1.7.0</span>
+  <span class="ver" id="version">v1.8.0</span>
   <span class="from">用語集トップ</span>
 </header>
 
@@ -66,14 +66,14 @@
 <footer>
   <p>やさしい技術解説シリーズ。たとえ話・図解・クイズで、技術のことばを「なんのために生まれたか」から説明しています。</p>
   <p class="footmeta">最終更新日: 2026.9.7（各ページの参考文献は、それぞれのページ末尾に記載）</p>
-  <p class="footver">用語集トップ　v1.7.0</p>
+  <p class="footver">用語集トップ　v1.8.0</p>
 </footer>
 
 </div>
 
 <script>
 "use strict";
-var APP_VERSION = "1.7.0";
+var APP_VERSION = "1.8.0";
 
 /* ============ 更新情報 ============ */
 /* type は NEWS_TYPES のキー。page を書くと、そのページの帯が並びます（省略可） */
@@ -84,6 +84,8 @@ var NEWS_TYPES = {
 };
 
 var NEWS = [
+  {date:"2026.9.7", type:"new", page:"db2",
+   body:'解説ページ「<a href="db2.html">Db2の統計と再編成のしくみ</a>」を追加しました。RUNSTATSで数え直し、REORGで並べ直す。同じSQLがある日おそくなる理由から。'},
   {date:"2026.9.7", type:"new", page:"graphql",
    body:'解説ページ「<a href="graphql.html">GraphQLのしくみ</a>」を追加しました。送るクエリと返るJSONを、並べて動かせます。'},
   {date:"2026.9.7", type:"update",
@@ -181,6 +183,12 @@ var PAGES = [
     title:"GraphQLのしくみ",
     q:"ほしい形を、こちらから書く。",
     meta:"返る形を決める役が、サーバーからクライアントへ移った話。詳細章つき。"
+  },
+  {
+    key:"db2", file:"db2.html", no:"14",
+    title:"Db2の統計と再編成のしくみ",
+    q:"数え直して、並べ直す。",
+    meta:"Db2 for LUW の RUNSTATS と REORG。同じSQLが、ある日おそくなる理由から。詳細章つき。"
   }
 ];
 
@@ -416,7 +424,35 @@ var TERMS = [
   {t:"コネクション", read:"こねくしょん", page:"graphql", anchor:"#d6",
    d:"edges・node・cursor・pageInfo を使った、カーソル方式のページングの型。件数の上限をスキーマの形で表せる。"},
   {t:"永続化文書", read:"えいぞくかぶんしょ", page:"graphql", anchor:"#d4",
-   d:"使うクエリをあらかじめサーバーに登録しておき、実行時はそのIDだけを送る方式。通信量が減り、許可した文書だけを実行させられる。"}
+   d:"使うクエリをあらかじめサーバーに登録しておき、実行時はそのIDだけを送る方式。通信量が減り、許可した文書だけを実行させられる。"},
+
+  /* --- Db2（統計と再編成） --- */
+  {t:"RUNSTATS", read:"RUNSTATS", page:"db2", anchor:"#runstats",
+   d:"表や索引の中身を数えて、統計としてカタログ表に記録するDb2のコマンド。データそのものは1行も動かさない。"},
+  {t:"REORG", read:"REORG", page:"db2", anchor:"#how",
+   d:"表や索引の物理的な並びを整理し直すコマンド。削除の跡のすきまを詰め、指定した索引の順に行を並べ直す。"},
+  {t:"オプティマイザ", read:"おぷてぃまいざ", page:"db2", anchor:"#why",
+   d:"SQLをどの経路で実行するかを決める係。判断材料は統計情報で、材料が古いと、まちがった経路を自信を持って選ぶ。"},
+  {t:"アクセスプラン", read:"あくせすぷらん", page:"db2", anchor:"#words",
+   d:"オプティマイザが選んだ実行の段取り。表を全部読むか、索引をたどるか、どの表から結合するか。"},
+  {t:"カーディナリティ", read:"かーでぃなりてぃ", page:"db2", anchor:"#words",
+   d:"件数のこと。表の行数は CARD、列に入っている値の異なり数は COLCARD として統計に記録される。"},
+  {t:"分布統計", read:"ぶんぷとうけい", page:"db2", anchor:"#d2",
+   d:"列の値の偏りの記録。WITH DISTRIBUTION を付けると集める。特定の値だけ極端に多い列で効く。"},
+  {t:"クラスター率", read:"くらすたーりつ", page:"db2", anchor:"#d4",
+   d:"CLUSTERRATIO。索引の並び順と実データの並び順がどれだけ一致しているか。低いと、索引をたどるたびに飛び飛びのページを読む。"},
+  {t:"オーバーフロー行", read:"おーばーふろーぎょう", page:"db2", anchor:"#two",
+   d:"更新で長くなり、元のページに入りきらず別ページへ移った行。元の場所には印だけが残るので、読むページが増える。"},
+  {t:"擬似削除", read:"ぎじさくじょ", page:"db2", anchor:"#words",
+   d:"索引の中で「消した」と印を付けただけの状態。領域はまだ残っていて、掃除しないとたまり続ける。"},
+  {t:"REORGCHK", read:"REORGCHK", page:"db2", anchor:"#check",
+   d:"統計から8つの式を計算し、REORGすべきかを判定するコマンド。出力の * は、その式が推奨範囲から外れている印。"},
+  {t:"INPLACE再編成", read:"INPLACEさいへんせい", page:"db2", anchor:"#how",
+   d:"表を止めずに、中で少しずつ行を動かすREORG。時間とログを使い、索引は作り直されないので別に流す。"},
+  {t:"統計プロファイル", read:"とうけいぷろふぁいる", page:"db2", anchor:"#d2",
+   d:"「この表はこの取り方で」をDb2に登録しておく仕組み。SET PROFILE で登録し、USE PROFILE で再現する。"},
+  {t:"REBIND", read:"REBIND", page:"db2", anchor:"#order",
+   d:"静的SQLのパッケージに、いまの統計で計画を選び直させる操作。動的SQLはキャッシュが無効化され、自動で選び直される。"}
 ];
 
 /* ============ 表示 ============ */
